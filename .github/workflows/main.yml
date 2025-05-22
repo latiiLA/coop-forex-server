@@ -1,0 +1,34 @@
+name: Go Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Install dependencies
+        working-directory: coop-forex-server
+        run: go mod tidy
+
+      - name: Run unit tests
+        working-directory: coop-forex-server
+        run: go test ./... -v
+
+    services:
+      mongo:
+        image: mongo:5.0
+        ports:
+          - 27017:27017
