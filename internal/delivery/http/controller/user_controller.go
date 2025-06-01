@@ -51,11 +51,11 @@ func (uc *userController) Login(c *gin.Context){
 		return
 	}
 	
-	user, accessToken, err := uc.userUsecase.Login(c, userReq)
+	user, err := uc.userUsecase.Login(c, userReq)
 	if err != nil{
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "token": accessToken, "user": user})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Login successful", Data: user})
 }

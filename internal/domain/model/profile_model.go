@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,4 +21,10 @@ type Profile struct {
 	BranchID *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
+}
+
+type ProfileRepository interface{
+	Create(ctx context.Context, profile *Profile) error
+	FindByID(ctx context.Context, profile_id primitive.ObjectID) (*Profile, error)
+	Update(ctx context.Context, userID primitive.ObjectID, profile *Profile) (*Profile,  error)
 }

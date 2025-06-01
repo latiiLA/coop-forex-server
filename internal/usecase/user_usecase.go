@@ -14,19 +14,22 @@ import (
 
 type UserUsecase interface {
 	Register(c context.Context, user *model.User) error
-	Login(c context.Context, userReq model.LoginRequestDTO) (model.LoginResponseDTO, string, error)
+	Login(c context.Context, userReq model.LoginRequestDTO) (*model.LoginResponseDTO, error)
+	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.UserResponseDTO, error)
 }
 
 type userUsecase struct {
 	userRepository model.UserRepository
 	roleRepository model.RoleRepository
+	profileRepository model.ProfileRepository
 	contextTimeout time.Duration
 }
 
-func NewUserUsecase(userRepository model.UserRepository, roleRepository model.RoleRepository, timeout time.Duration) UserUsecase{
+func NewUserUsecase(userRepository model.UserRepository, roleRepository model.RoleRepository, profileRepository model.ProfileRepository, timeout time.Duration) UserUsecase{
 	return &userUsecase{
 		userRepository: userRepository,
 		roleRepository: roleRepository,
+		profileRepository: profileRepository,
 		contextTimeout: timeout,
 	}
 }
@@ -51,41 +54,51 @@ func (uc *userUsecase) Register(c context.Context, user *model.User) error{
 	return uc.userRepository.Create(ctx, user)
 }
 
-func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO)(model.LoginResponseDTO, string, error){
+func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO)(*model.LoginResponseDTO, error){
 	ctx, cancel := context.WithTimeout(c, uc.contextTimeout)
 	defer cancel()
 
 	existingUser, err := uc.userRepository.FindByUsername(ctx, userReq.Username)
 	if err != nil{
 		fmt.Println("Invalid username or user")
-		return model.LoginResponseDTO{}, "", errors.New("invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 
 	err = infrastructure.CheckPasswordHash(existingUser.Password, userReq.Password)
 	if err != nil {
 		fmt.Println("Invalid password:", err)
-		return model.LoginResponseDTO{}, "", errors.New("invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 
 	role, err := uc.roleRepository.FindByID(ctx, existingUser.RoleID)
 	if err != nil{
-		return model.LoginResponseDTO{}, "", errors.New("role not found")
+		return nil, errors.New("role not found")
 	}
 
 	accessToken, err := infrastructure.GenerateToken(existingUser.ID, role.Type)
 	if err != nil{
-		return model.LoginResponseDTO{}, "", err
+		return nil, err
+	}
+
+	profile, err := uc.profileRepository.FindByID(ctx, existingUser.ProfileID)
+	if err != nil{
+		return nil, err
 	}
 
 	response := model.LoginResponseDTO{
 		ID: existingUser.ID,
-		// FirstName: existingUser.FirstName,
-		// MiddleName: existingUser.MiddleName,
+		FirstName: profile.FirstName,
+		MiddleName: profile.FirstName,
 		Username: existingUser.Username,
 		Role: role.Type,
 		Token: accessToken,
 	}
 	
+	return &response, nil
+}
 
-	return response, accessToken, nil
+func (uc *userUsecase) GetUserByID(ctx context.Context, user_id primitive.ObjectID) (*model.UserResponseDTO, error){
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+	return uc.userRepository.FindByID(ctx, user_id)
 }
