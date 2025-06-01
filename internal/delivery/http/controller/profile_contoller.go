@@ -36,8 +36,8 @@ func (pc *profileController) GetProfileByID(c *gin.Context) {
 	}
 
 	profileID := c.Param("id")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+	if profileID == "" {
+		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "profile id not found in param"})
 		return
 	}
 
@@ -55,7 +55,7 @@ func (pc *profileController) GetProfileByID(c *gin.Context) {
 	}
 
 	if user.ProfileID != profileObjID {
-		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: "not authorized to view"})
 		return
 	}
 
@@ -65,7 +65,7 @@ func (pc *profileController) GetProfileByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Profile fetched successfully", Data: profile})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "profile fetched successfully", Data: profile})
 }
 
 func (pc *profileController) UpdateProfileByID(c *gin.Context) {
@@ -76,8 +76,8 @@ func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 	}
 
 	profileID := c.Param("id")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+	if profileID == "" {
+		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "profile id not found in param"})
 		return
 	}
 
@@ -95,7 +95,7 @@ func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 	}
 
 	if user.ProfileID != profileObjID {
-		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: "not authorized to update"})
 		return
 	}
 

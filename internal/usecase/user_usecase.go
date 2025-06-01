@@ -85,10 +85,12 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, err
 	}
 
+	fmt.Println("profile", profile)
+
 	response := model.LoginResponseDTO{
 		ID:         existingUser.ID,
 		FirstName:  profile.FirstName,
-		MiddleName: profile.FirstName,
+		MiddleName: profile.LastName,
 		Username:   existingUser.Username,
 		Role:       role.Type,
 		Token:      accessToken,

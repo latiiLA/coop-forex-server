@@ -44,8 +44,8 @@ func (pr *profileRepository) FindByID(ctx context.Context, profile_id primitive.
 	return &profile, nil
 }
 
-func (pr *profileRepository) Update(ctx context.Context, userID primitive.ObjectID, profile *model.Profile) (*model.Profile, error) {
-	filter := bson.M{"_id": userID}
+func (pr *profileRepository) Update(ctx context.Context, profile_id primitive.ObjectID, profile *model.Profile) (*model.Profile, error) {
+	filter := bson.M{"_id": profile_id}
 
 	result, err := pr.collection.UpdateOne(ctx, filter, bson.M{"$set": profile})
 
@@ -61,5 +61,5 @@ func (pr *profileRepository) Update(ctx context.Context, userID primitive.Object
 		return nil, fmt.Errorf("no changes were made")
 	}
 
-	return pr.FindByID(ctx, userID)
+	return pr.FindByID(ctx, profile_id)
 }

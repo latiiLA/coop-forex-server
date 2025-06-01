@@ -14,4 +14,7 @@ func RouterSetup(timeout time.Duration, db *mongo.Database, router *gin.Engine) 
 
 	roleRouter := router.Group("")
 	NewRoleRouter(db, timeout, roleRouter)
+
+	profileRouter := router.Group("")
+	NewProfileRouter(db, timeout, profileRouter)
 }

@@ -26,7 +26,7 @@ func NewProfileUsecase(profileRepository model.ProfileRepository, timeout time.D
 	}
 }
 
-func (pu *profileUsecase) AddProfile(ctx context.Context, userID primitive.ObjectID, profile *model.Profile) error {
+func (pu *profileUsecase) AddProfile(ctx context.Context, user_id primitive.ObjectID, profile *model.Profile) error {
 	ctx, cancel := context.WithTimeout(ctx, pu.contextTimeout)
 	defer cancel()
 
@@ -36,14 +36,14 @@ func (pu *profileUsecase) AddProfile(ctx context.Context, userID primitive.Objec
 	return pu.profileRepository.Create(ctx, profile)
 }
 
-func (pu *profileUsecase) GetProfileByID(ctx context.Context, userID primitive.ObjectID) (*model.Profile, error) {
+func (pu *profileUsecase) GetProfileByID(ctx context.Context, profile_id primitive.ObjectID) (*model.Profile, error) {
 	ctx, cancel := context.WithTimeout(ctx, pu.contextTimeout)
 	defer cancel()
-	return pu.profileRepository.FindByID(ctx, userID)
+	return pu.profileRepository.FindByID(ctx, profile_id)
 }
 
-func (pu *profileUsecase) UpdateProfile(ctx context.Context, userID primitive.ObjectID, profile *model.Profile) (*model.Profile, error) {
+func (pu *profileUsecase) UpdateProfile(ctx context.Context, profile_id primitive.ObjectID, profile *model.Profile) (*model.Profile, error) {
 	ctx, cancel := context.WithTimeout(ctx, pu.contextTimeout)
 	defer cancel()
-	return pu.profileRepository.Update(ctx, userID, profile)
+	return pu.profileRepository.Update(ctx, profile_id, profile)
 }
