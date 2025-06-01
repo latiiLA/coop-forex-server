@@ -34,8 +34,8 @@ func RouterSetup(timeout time.Duration, db *mongo.Database, router *gin.Engine){
 	managerRouter := router.Group("")
 	managerRouter.Use(middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("manager"))
 
-	SuperAdminRouter := router.Group("")
-	SuperAdminRouter.Use(middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"))
-	NewRoleRouter(timeout, db, SuperAdminRouter)
+	superAdminRouter := router.Group("")
+	superAdminRouter.Use(middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"))
+	NewRoleRouter(timeout, db, superAdminRouter)
 }
 
