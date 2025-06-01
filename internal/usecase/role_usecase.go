@@ -15,31 +15,31 @@ type RoleUsecase interface {
 	GetAllRoles(ctx context.Context) ([]model.Role, error)
 }
 
-type roleUsecase struct{
+type roleUsecase struct {
 	roleRepository model.RoleRepository
 	contextTimeout time.Duration
 }
 
-func NewRoleUsecase(roleRepository model.RoleRepository, timeout time.Duration) RoleUsecase{
+func NewRoleUsecase(roleRepository model.RoleRepository, timeout time.Duration) RoleUsecase {
 	return &roleUsecase{
 		roleRepository: roleRepository,
 		contextTimeout: timeout,
 	}
 }
 
-func (ru *roleUsecase) AddRole(ctx context.Context, userID primitive.ObjectID, role *model.Role) error{
+func (ru *roleUsecase) AddRole(ctx context.Context, userID primitive.ObjectID, role *model.Role) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	if role.Type == "superadmin"{
+	if role.Type == "superadmin" {
 		return errors.New("role not allowed")
 	}
 
 	exists, err := ru.roleRepository.ExistsRoleByName(ctx, role.Type)
-	if err != nil{
+	if err != nil {
 		return err
 	}
-	if exists{
+	if exists {
 		return errors.New("role already exists")
 	}
 
@@ -52,13 +52,13 @@ func (ru *roleUsecase) AddRole(ctx context.Context, userID primitive.ObjectID, r
 	return ru.roleRepository.Create(ctx, role)
 }
 
-func (ru *roleUsecase) GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (model.Role, error){
+func (ru *roleUsecase) GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (model.Role, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 	return ru.roleRepository.FindByID(ctx, role_id)
 }
 
-func (ru *roleUsecase) GetAllRoles(ctx context.Context) ([]model.Role, error){
+func (ru *roleUsecase) GetAllRoles(ctx context.Context) ([]model.Role, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 	return ru.roleRepository.FindAll(ctx)

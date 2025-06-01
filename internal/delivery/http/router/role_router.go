@@ -14,7 +14,7 @@ func NewRoleRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterG
 	roleRepo := repository.NewRoleRepository(db, timeout)
 	roleUsecase := usecase.NewRoleUsecase(roleRepo, timeout)
 	roleController := controller.NewRoleController(roleUsecase)
-	
+
 	group.POST("/role", roleController.AddRole)
 	group.GET("/role", roleController.GetAllRoles)
 }

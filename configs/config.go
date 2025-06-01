@@ -10,13 +10,13 @@ import (
 
 var (
 	JwtSecret string
-	MongoURL string
-	Timeout time.Duration
+	MongoURL  string
+	Timeout   time.Duration
 )
 
 func LoadConfig() {
 	err := godotenv.Load(".env")
-	if err != nil{
+	if err != nil {
 		log.Println("No .env file found or couldn't load it, relying on environment variables")
 	}
 

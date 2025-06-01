@@ -8,17 +8,17 @@ import (
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 )
 
-func JwtAuthMiddleware(secretKey string) gin.HandlerFunc{
-	return func(c *gin.Context){
+func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		// Check Authorization header
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer"){
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		claims, err := infrastructure.ValidateToken(token)
-		if err != nil{
+		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid token"})
 			return
 		}

@@ -16,19 +16,19 @@ type ProfileController interface {
 	UpdateProfileByID(c *gin.Context)
 }
 
-type profileController struct{
+type profileController struct {
 	profileUsecase usecase.ProfileUsecase
-	userUsecase usecase.UserUsecase
+	userUsecase    usecase.UserUsecase
 }
 
-func NewProfileController(profileUsecase usecase.ProfileUsecase, userUsecase usecase.UserUsecase) ProfileController{
+func NewProfileController(profileUsecase usecase.ProfileUsecase, userUsecase usecase.UserUsecase) ProfileController {
 	return &profileController{
 		profileUsecase: profileUsecase,
-		userUsecase: userUsecase,
+		userUsecase:    userUsecase,
 	}
 }
 
-func (pc *profileController) GetProfileByID(c *gin.Context){
+func (pc *profileController) GetProfileByID(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
@@ -36,31 +36,31 @@ func (pc *profileController) GetProfileByID(c *gin.Context){
 	}
 
 	profileID := c.Param("id")
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
-	} 
+	}
 
 	profileObjID, err := primitive.ObjectIDFromHex(profileID)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	// Load user by userID
 	user, err := pc.userUsecase.GetUserByID(c, authUserID)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusNotFound, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	if user.ProfileID != profileObjID{
+	if user.ProfileID != profileObjID {
 		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	profile, err := pc.profileUsecase.GetProfileByID(c, profileObjID)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
 	}
@@ -68,7 +68,7 @@ func (pc *profileController) GetProfileByID(c *gin.Context){
 	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Profile fetched successfully", Data: profile})
 }
 
-func (pc *profileController) UpdateProfileByID(c *gin.Context){
+func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
@@ -76,39 +76,39 @@ func (pc *profileController) UpdateProfileByID(c *gin.Context){
 	}
 
 	profileID := c.Param("id")
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	profileObjID, err := primitive.ObjectIDFromHex(profileID)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	// Load user by userID
 	user, err := pc.userUsecase.GetUserByID(c, authUserID)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusNotFound, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	if user.ProfileID != profileObjID{
+	if user.ProfileID != profileObjID {
 		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	var updatedData model.Profile
-	
+
 	err = c.ShouldBindJSON(&updatedData)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	profile, err := pc.profileUsecase.UpdateProfile(c, profileObjID, &updatedData)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
 	}

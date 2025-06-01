@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func RouterSetup(timeout time.Duration, db *mongo.Database, router *gin.Engine){
+func RouterSetup(timeout time.Duration, db *mongo.Database, router *gin.Engine) {
 	publicRouter := router.Group("")
 	// All public APIS
 	NewPublicRouter(db, timeout, publicRouter)
@@ -15,4 +15,3 @@ func RouterSetup(timeout time.Duration, db *mongo.Database, router *gin.Engine){
 	roleRouter := router.Group("")
 	NewRoleRouter(db, timeout, roleRouter)
 }
-
