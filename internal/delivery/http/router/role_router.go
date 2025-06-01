@@ -10,11 +10,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func NewRoleRouter(timeout time.Duration, db *mongo.Database, group *gin.RouterGroup) {
+func NewRoleRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
 	roleRepo := repository.NewRoleRepository(db, timeout)
 	roleUsecase := usecase.NewRoleUsecase(roleRepo, timeout)
 	roleController := controller.NewRoleController(roleUsecase)
-
+	
 	group.POST("/role", roleController.AddRole)
 	group.GET("/role", roleController.GetAllRoles)
 }

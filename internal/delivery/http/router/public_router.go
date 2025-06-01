@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func NewPublicRouter(timeout time.Duration, db *mongo.Database, group *gin.RouterGroup) {
+func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
 	userRepo := repository.NewUserRepository(db, timeout)
 	roleRepo := repository.NewRoleRepository(db, timeout)
 	profileRepo := repository.NewProfileRepository(db, timeout)
