@@ -18,20 +18,20 @@ func main() {
 
 	clientOptions := options.Client().ApplyURI(configs.MongoURL)
 	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil{
+	if err != nil {
 		log.Fatal("Mongo connection error:", err)
 	}
 
-	defer func ()  {
-		if err := client.Disconnect(ctx); err != nil{
+	defer func() {
+		if err := client.Disconnect(ctx); err != nil {
 			log.Printf("Warning: failed to disconnect from DB: %v", err)
 
-		}else{
+		} else {
 			log.Printf("DB connection closed")
 		}
 	}()
 
-	if err = client.Ping(ctx, nil); err != nil{
+	if err = client.Ping(ctx, nil); err != nil {
 		log.Fatal("Ping error:", err)
 	}
 
@@ -43,7 +43,7 @@ func main() {
 	r := gin.Default()
 	router.RouterSetup(timeout, db, r)
 
-	if err := r.Run(":8080"); err != nil{
+	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }

@@ -8,20 +8,20 @@ import (
 )
 
 func GetUserID(c *gin.Context) (primitive.ObjectID, error) {
-    val, exists := c.Get("userID")
-    if !exists {
-        return primitive.NilObjectID, errors.New("user ID not found in context")
-    }
+	val, exists := c.Get("userID")
+	if !exists {
+		return primitive.NilObjectID, errors.New("user ID not found in context")
+	}
 
-    userIDStr, ok := val.(string)
-    if !ok {
-        return primitive.NilObjectID, errors.New("user ID is not a valid string")
-    }
+	userIDStr, ok := val.(string)
+	if !ok {
+		return primitive.NilObjectID, errors.New("user ID is not a valid string")
+	}
 
-    userID, err := primitive.ObjectIDFromHex(userIDStr)
-    if err != nil {
-        return primitive.NilObjectID, errors.New("invalid ObjectID format")
-    }
+	userID, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		return primitive.NilObjectID, errors.New("invalid ObjectID format")
+	}
 
-    return userID, nil
+	return userID, nil
 }

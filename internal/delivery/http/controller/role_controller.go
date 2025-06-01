@@ -16,17 +16,17 @@ type RoleController interface {
 	GetAllRoles(c *gin.Context)
 }
 
-type roleController struct{
+type roleController struct {
 	roleUsecase usecase.RoleUsecase
 }
 
-func NewRoleController(roleUsecase usecase.RoleUsecase) RoleController{
+func NewRoleController(roleUsecase usecase.RoleUsecase) RoleController {
 	return &roleController{
 		roleUsecase: roleUsecase,
 	}
 }
 
-func (rc *roleController) AddRole(c *gin.Context){
+func (rc *roleController) AddRole(c *gin.Context) {
 	userID, err := utils.GetUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
@@ -36,7 +36,7 @@ func (rc *roleController) AddRole(c *gin.Context){
 	var role model.Role
 
 	err = c.ShouldBindJSON(&role)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
 	}
@@ -47,7 +47,7 @@ func (rc *roleController) AddRole(c *gin.Context){
 	}
 
 	err = rc.roleUsecase.AddRole(c, userID, &role)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
 	}
@@ -55,12 +55,12 @@ func (rc *roleController) AddRole(c *gin.Context){
 	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Role created successfully"})
 }
 
-func (rc *roleController) GetAllRoles(c *gin.Context){
+func (rc *roleController) GetAllRoles(c *gin.Context) {
 	roles, err := rc.roleUsecase.GetAllRoles(c)
-	if err != nil{
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, roles)
 }

@@ -9,7 +9,7 @@ import (
 type Currency struct {
 	ID        primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	Name      string              `json:"name" bson:"name"`
-	ShortCode string			  `json:"short_code" bson:"short_code"`
+	ShortCode string              `json:"short_code" bson:"short_code"`
 	CreatedAt time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time           `json:"updated_at" bson:"update_at"`
 	CreatedBy primitive.ObjectID  `json:"created_by" bson:"created_by"`
