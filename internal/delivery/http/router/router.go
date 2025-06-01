@@ -12,7 +12,7 @@ import (
 func RouterSetup(timeout time.Duration, db *mongo.Database, router *gin.Engine){
 	publicRouter := router.Group("")
 	// All public APIS
-	NewUserRouter(timeout, db, publicRouter)
+	NewPublicRouter(timeout, db, publicRouter)
 
 	// All authenticated user routes (any logged-in user)
 	authRouter := router.Group("")
