@@ -17,7 +17,7 @@ func NewProfileRouter(db *mongo.Database, timeout time.Duration, group *gin.Rout
 	profileUsecase := usecase.NewProfileUsecase(profileRepo, timeout)
 	userRepo := repository.NewUserRepository(db, timeout)
 	roleRepo := repository.NewRoleRepository(db, timeout)
-	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout)
+	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout, db.Client())
 	profileController := controller.NewProfileController(profileUsecase, userUsecase)
 
 	group.GET("/profile/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), profileController.GetProfileByID)
