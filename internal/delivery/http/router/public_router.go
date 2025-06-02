@@ -4,7 +4,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/latiiLA/coop-forex-server/configs"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/controller"
+	"github.com/latiiLA/coop-forex-server/internal/infrastructure/middleware"
 	"github.com/latiiLA/coop-forex-server/internal/repository"
 	"github.com/latiiLA/coop-forex-server/internal/usecase"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,9 +16,12 @@ func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.Route
 	userRepo := repository.NewUserRepository(db, timeout)
 	roleRepo := repository.NewRoleRepository(db, timeout)
 	profileRepo := repository.NewProfileRepository(db, timeout)
-	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout)
+	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout, db.Client())
 	userController := controller.NewUserController(userUsecase)
 
 	group.POST("/login", userController.Login)
-	group.POST("/register", userController.Register)
+	group.POST("/register", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.Register)
+	group.GET("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.GetAllUsers)
+	group.PUT("/users/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.UpdateUser)
+	// group.PATCH("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.DeleteUser)
 }

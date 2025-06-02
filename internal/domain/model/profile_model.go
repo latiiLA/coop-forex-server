@@ -16,7 +16,7 @@ type Profile struct {
 	ShortBio     *string             `json:"short_bio,omitempty" bson:"short_bio,omitempty"`
 	Gender       *string             `json:"gender,omitempty" bson:"gender,omitempty"`
 	Phone        *string             `json:"phone,omitempty" bson:"phone,omitempty"`
-	Email        *string             `json:"email,omitempty" bson:"email,omitempty"`
+	Email        string              `json:"email" bson:"email"`
 	DepartmentID *primitive.ObjectID `json:"department_id,omitempty" bson:"department_id,omitempty"`
 	BranchID     *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
 	CreatedAt    time.Time           `json:"created_at" bson:"created_at"`

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
@@ -49,20 +50,112 @@ func (ur *userRepository) FindByID(ctx context.Context, user_id primitive.Object
 	}
 
 	return &user, nil
+
+	// var users []model.UserResponseDTO
+
+	// cursor, err := ur.collection.Find(ctx, bson.M{})
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer cursor.Close(ctx)
+
+	// if err := cursor.All(ctx, &users); err != nil {
+	// 	return nil, err
+	// }
+
+	// return &users, err
 }
 
 func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO, error) {
-	var users []model.UserResponseDTO
 
-	cursor, err := ur.collection.Find(ctx, bson.M{})
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.D{
+			{Key: "is_deleted", Value: false},
+		}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "profiles"},
+			{Key: "localField", Value: "profile_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "profile"},
+		}}},
+		{{Key: "$unwind", Value: "$profile"}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "role_id", Value: 1},
+			{Key: "profile_id", Value: 1},
+			{Key: "username", Value: 1},
+			{Key: "email", Value: "$profile.email"},
+			{Key: "status", Value: 1},
+			{Key: "first_name", Value: "$profile.first_name"},
+			{Key: "middle_name", Value: "$profile.middle_name"},
+			{Key: "last_name", Value: "$profile.last_name"},
+			{Key: "department_id", Value: "$profile.department_id"},
+			{Key: "branch_id", Value: "$profile.branch_id"},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
+			{Key: "created_by", Value: 1},
+			{Key: "updated_by", Value: 1},
+			{Key: "deleted_by", Value: 1},
+			{Key: "deleted_at", Value: 1},
+			{Key: "is_deleted", Value: 1},
+		}}},
+	}
+
+	cursor, err := ur.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
+	var users []model.UserResponseDTO
 	if err := cursor.All(ctx, &users); err != nil {
 		return nil, err
 	}
 
-	return &users, err
+	fmt.Println("users", users)
+
+	return &users, nil
+}
+
+func (ur *userRepository) Update(ctx context.Context, user_id primitive.ObjectID, user *model.User) (*model.UserResponseDTO, error) {
+	filter := bson.M{"_id": user_id}
+
+	result, err := ur.collection.UpdateOne(ctx, filter, bson.M{"$set": user})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if result.MatchedCount == 0 {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	if result.ModifiedCount == 0 {
+		return nil, fmt.Errorf("no changes were made")
+	}
+
+	var updatedUser model.UserResponseDTO
+	err = ur.collection.FindOne(ctx, filter).Decode(&updatedUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedUser, nil
+}
+
+func (ur *userRepository) Delete(ctx context.Context, user_id primitive.ObjectID, user *model.User) error {
+	filter := bson.M{"_id": user_id}
+	update := bson.M{"is_deleted": true}
+
+	result, err := ur.collection.UpdateOne(ctx, filter, update)
+
+	if err != nil {
+		return err
+	}
+
+	if result.MatchedCount == 0 || result.ModifiedCount == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }
