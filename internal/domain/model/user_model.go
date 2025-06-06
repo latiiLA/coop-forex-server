@@ -85,7 +85,7 @@ type UserRepository interface {
 	Create(c context.Context, user *User) error
 	FindByUsername(c context.Context, username string) (*User, error)
 	FindAll(c context.Context) (*[]UserResponseDTO, error)
-	FindByID(c context.Context, user_id primitive.ObjectID) (*UserResponseDTO, error)
-	Update(c context.Context, user_id primitive.ObjectID, user *User) (*UserResponseDTO, error)
+	FindByID(c context.Context, user_id primitive.ObjectID) (*User, error)
+	Update(c context.Context, user_id primitive.ObjectID, user *User) (*User, error)
 	Delete(c context.Context, user_id primitive.ObjectID, user *User) error
 }
