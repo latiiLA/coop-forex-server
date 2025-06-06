@@ -9,7 +9,7 @@ import (
 
 type Role struct {
 	ID        primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
-	Type      string              `json:"type" bson:"type"`
+	Name      string              `json:"name" bson:"name"`
 	CreatedAt time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time           `json:"updated_at" bson:"update_at"`
 	CreatedBy primitive.ObjectID  `json:"created_by" bson:"created_by"`

@@ -84,10 +84,8 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 
 	if err != nil {
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
-			return
-		}
+		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
+		return
 	}
 
 	// get user id from param
@@ -116,5 +114,5 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "user updated successful", Data: user})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "user update successful", Data: user})
 }
