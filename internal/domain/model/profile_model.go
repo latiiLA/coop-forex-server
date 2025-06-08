@@ -26,5 +26,6 @@ type Profile struct {
 type ProfileRepository interface {
 	Create(ctx context.Context, profile *Profile) error
 	FindByID(ctx context.Context, profile_id primitive.ObjectID) (*Profile, error)
+	FindByEmail(ctx context.Context, email string) (*Profile, error)
 	Update(ctx context.Context, profile_id primitive.ObjectID, profile *Profile) (*Profile, error)
 }
