@@ -44,6 +44,19 @@ func (pr *profileRepository) FindByID(ctx context.Context, profile_id primitive.
 	return &profile, nil
 }
 
+func (pr *profileRepository) FindByEmail(ctx context.Context, email string) (*model.Profile, error) {
+	filter := bson.M{"email": email}
+	var profile *model.Profile
+
+	if err := pr.collection.FindOne(ctx, filter).Decode(&profile); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("profile not found")
+		}
+		return nil, err
+	}
+	return profile, nil
+}
+
 func (pr *profileRepository) Update(ctx context.Context, profile_id primitive.ObjectID, profile *model.Profile) (*model.Profile, error) {
 	filter := bson.M{"_id": profile_id}
 
