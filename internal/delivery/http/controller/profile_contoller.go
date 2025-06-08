@@ -47,19 +47,7 @@ func (pc *profileController) GetProfileByID(c *gin.Context) {
 		return
 	}
 
-	// Load user by userID
-	user, err := pc.userUsecase.GetUserByID(c, authUserID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, response.ErrorResponse{Message: err.Error()})
-		return
-	}
-
-	if user.ProfileID != profileObjID {
-		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: "not authorized to view"})
-		return
-	}
-
-	profile, err := pc.profileUsecase.GetProfileByID(c, profileObjID)
+	profile, err := pc.profileUsecase.GetProfileByID(c, authUserID, profileObjID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
@@ -87,18 +75,6 @@ func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 		return
 	}
 
-	// Load user by userID
-	user, err := pc.userUsecase.GetUserByID(c, authUserID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, response.ErrorResponse{Message: err.Error()})
-		return
-	}
-
-	if user.ProfileID != profileObjID {
-		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: "not authorized to update"})
-		return
-	}
-
 	var updatedData model.Profile
 
 	err = c.ShouldBindJSON(&updatedData)
@@ -107,7 +83,7 @@ func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 		return
 	}
 
-	profile, err := pc.profileUsecase.UpdateProfile(c, profileObjID, &updatedData)
+	profile, err := pc.profileUsecase.UpdateProfileByUserID(c, authUserID, profileObjID, &updatedData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
