@@ -30,7 +30,7 @@ func (pr *profileRepository) Create(ctx context.Context, profile *model.Profile)
 }
 
 func (pr *profileRepository) FindByID(ctx context.Context, profile_id primitive.ObjectID) (*model.Profile, error) {
-	filter := bson.M{"_id": profile_id}
+	filter := bson.M{"_id": profile_id, "is_deleted": false}
 	var profile model.Profile
 
 	err := pr.collection.FindOne(ctx, filter).Decode(&profile)
@@ -45,20 +45,18 @@ func (pr *profileRepository) FindByID(ctx context.Context, profile_id primitive.
 }
 
 func (pr *profileRepository) FindByEmail(ctx context.Context, email string) (*model.Profile, error) {
-	filter := bson.M{"email": email}
-	var profile *model.Profile
+	filter := bson.M{"email": email, "is_deleted": false}
+	var profile model.Profile
 
-	if err := pr.collection.FindOne(ctx, filter).Decode(&profile); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, fmt.Errorf("profile not found")
-		}
+	err := pr.collection.FindOne(ctx, filter).Decode(&profile)
+	if err != nil {
 		return nil, err
 	}
-	return profile, nil
+	return &profile, nil
 }
 
 func (pr *profileRepository) Update(ctx context.Context, profile_id primitive.ObjectID, profile *model.Profile) (*model.Profile, error) {
-	filter := bson.M{"_id": profile_id}
+	filter := bson.M{"_id": profile_id, "is_deleted": false}
 
 	result, err := pr.collection.UpdateOne(ctx, filter, bson.M{"$set": profile})
 

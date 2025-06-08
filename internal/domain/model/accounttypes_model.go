@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Account refers to Institution or individual account
 type AccountTypes struct {
 	ID        primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	Type      string              `json:"type" bson:"type"`

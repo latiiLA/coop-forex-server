@@ -9,6 +9,7 @@ import (
 type District struct {
 	ID        primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	Name      string              `json:"name" bson:"name"`
+	Address   string              `json:"address" bson:"address"`
 	CreatedAt time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time           `json:"updated_at" bson:"update_at"`
 	CreatedBy primitive.ObjectID  `json:"created_by" bson:"created_by"`

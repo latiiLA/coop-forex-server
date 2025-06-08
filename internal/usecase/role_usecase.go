@@ -31,11 +31,11 @@ func (ru *roleUsecase) AddRole(ctx context.Context, userID primitive.ObjectID, r
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	if role.Type == "superadmin" {
+	if role.Name == "superadmin" {
 		return errors.New("role not allowed")
 	}
 
-	exists, err := ru.roleRepository.ExistsRoleByName(ctx, role.Type)
+	exists, err := ru.roleRepository.ExistsRoleByName(ctx, role.Name)
 	if err != nil {
 		return err
 	}

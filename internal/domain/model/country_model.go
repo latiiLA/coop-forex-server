@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -10,12 +11,23 @@ type Country struct {
 	ID         primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	Name       string              `json:"name" bson:"name"`
 	ShortCode  string              `json:"short_code" bson:"short_code"`
+	VisaStatus string              `json:"visa_status" bson:"visa_status"`
 	CreatedAt  time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt  time.Time           `json:"updated_at" bson:"update_at"`
 	CreatedBy  primitive.ObjectID  `json:"created_by" bson:"created_by"`
 	UpdatedBy  *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy  *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt  *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	VisaStatus bool                `json:"visa_status" bson:"visa_status"`
-	IsDeleted  bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
+	IsDeleted  bool                `json:"-" bson:"is_deleted"`
+}
+
+type CountryResponseDTO struct {
+}
+
+type CountryRepository interface {
+	Create(ctx context.Context, country *Country) error
+	FindByID(ctx context.Context, country_id primitive.ObjectID) (*Country, error)
+	FindAll(ctx context.Context) ([]Country, error)
+	Update(ctx context.Context, country_id primitive.ObjectID, country *Country) (*Country, error)
+	Delete(ctx context.Context, country_id primitive.ObjectID) error
 }

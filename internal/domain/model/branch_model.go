@@ -9,6 +9,8 @@ import (
 type Branch struct {
 	ID                primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	Name              string              `json:"name" bson:"name"`
+	BranchCode        string              `json:"branch_code" bson:"branch_code"`
+	Address           string              `json:"address" bson:"address"`
 	DistrictID        primitive.ObjectID  `json:"district_id" bson:"district_id"`
 	CreatedBy         primitive.ObjectID  `json:"created_by" bson:"created_by"`
 	UpdatedBy         *primitive.ObjectID `json:"updated_by" bson:"updated_by"`

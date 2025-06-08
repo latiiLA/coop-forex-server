@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jinzhu/copier"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -88,6 +89,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 
 		err = uc.profileRepository.Create(ctx, profile)
 		if err != nil {
+			session.AbortTransaction(sessCtx)
 			return err
 		}
 
@@ -110,7 +112,6 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 		}
 
 		return session.CommitTransaction(sessCtx)
-
 	})
 	return err
 }
@@ -136,7 +137,7 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, errors.New("role not found")
 	}
 
-	accessToken, err := infrastructure.GenerateToken(existingUser.ID, role.Type)
+	accessToken, err := infrastructure.GenerateToken(existingUser.ID, role.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -146,14 +147,12 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, err
 	}
 
-	fmt.Println("profile", profile)
-
 	response := model.LoginResponseDTO{
 		ID:         existingUser.ID,
 		FirstName:  profile.FirstName,
 		MiddleName: profile.LastName,
 		Username:   existingUser.Username,
-		Role:       role.Type,
+		Role:       role.Name,
 		Token:      accessToken,
 	}
 
@@ -177,7 +176,7 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 	}
 	defer session.EndSession(ctx)
 
-	var response *model.User
+	responseUser := model.UserResponseDTO{}
 
 	// Run everything in the transaction
 	err = mongo.WithSession(ctx, session, func(sessCtx mongo.SessionContext) error {
@@ -187,17 +186,15 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 
 		existingUser, err := uc.userRepository.FindByID(sessCtx, user_id)
 		if err != nil {
-			sessCtx.AbortTransaction(sessCtx)
 			return err
 		}
 
 		existingProfile, err := uc.profileRepository.FindByID(sessCtx, existingUser.ProfileID)
 		if err != nil {
-			sessCtx.AbortTransaction(sessCtx)
 			return err
 		}
 
-		// populate profile with the data
+		// Populate profile
 		if user.FirstName != "" {
 			existingProfile.FirstName = user.FirstName
 		}
@@ -208,54 +205,70 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 			existingProfile.LastName = user.LastName
 		}
 		if user.Email != "" {
+			existingProfileByEmail, err := uc.profileRepository.FindByEmail(sessCtx, user.Email)
+			if err != nil && err != mongo.ErrNoDocuments {
+				return err
+			}
+			if existingProfileByEmail != nil && existingProfileByEmail.ID != user_id {
+				return errors.New("email already exists")
+			}
 			existingProfile.Email = user.Email
 		}
-		if user.DepartmentID != &primitive.NilObjectID {
-			existingProfile.BranchID = &primitive.NilObjectID
-			existingProfile.DepartmentID = user.DepartmentID
-		}
 		if user.BranchID != &primitive.NilObjectID {
-			existingProfile.DepartmentID = &primitive.NilObjectID
+			existingProfile.DepartmentID = nil
 			existingProfile.BranchID = user.BranchID
 		}
-		existingProfile.UpdatedAt = time.Now()
+		if user.DepartmentID != &primitive.NilObjectID {
+			existingProfile.BranchID = nil
+			existingProfile.DepartmentID = user.DepartmentID
+		}
 
-		// update the profile
-		profile, err := uc.profileRepository.Update(sessCtx, existingUser.ProfileID, existingProfile)
+		// Populate user
+		if user.Role != primitive.NilObjectID {
+			existingUser.RoleID = user.Role
+		}
+		if user.Username != "" {
+			existingUserByUsername, err := uc.userRepository.FindByUsername(sessCtx, user.Username)
+			if err != nil && err != mongo.ErrNoDocuments {
+				return err
+			}
+			if existingUserByUsername != nil && existingUserByUsername.ID != user_id {
+				return errors.New("username already exists")
+			}
+			existingUser.Username = user.Username
+		}
+		if user.Password != "" {
+			encrytedPassword, err := infrastructure.HashPassword(user.Password)
+			if err != nil {
+				return err
+			}
+			existingUser.Password = encrytedPassword
+		}
+		existingUser.UpdatedBy = &authUserID
+		existingUser.UpdatedAt = time.Now()
+
+		// Database update for both profile and user
+		updateProfile, err := uc.profileRepository.Update(sessCtx, existingUser.ProfileID, existingProfile)
 		if err != nil {
 			session.AbortTransaction(sessCtx)
 			return err
 		}
 
-		// populate user info
-		if user.Role != primitive.NilObjectID {
-			existingUser.RoleID = user.Role
-		}
-		if user.Username != "" {
-			existingUser.Username = user.Username
-		}
-		if user.Password != "" {
-			encryptedPassword, err := infrastructure.HashPassword(user.Password)
-			if err != nil {
-				return err
-			}
-			existingUser.Password = encryptedPassword
-		}
-
-		existingUser.UpdatedBy = &authUserID
-		existingUser.UpdatedAt = time.Now()
-
-		// Update user data with populated data
-		if response, err = uc.userRepository.Update(sessCtx, user_id, existingUser); err != nil {
+		updatedUser, err := uc.userRepository.Update(sessCtx, user_id, existingUser)
+		if err != nil {
 			session.AbortTransaction(sessCtx)
 			return err
 		}
 
-		fmt.Println(existingUser, response)
-
+		copier.Copy(&responseUser, updatedUser)
+		copier.Copy(&responseUser, updateProfile)
 		return session.CommitTransaction(sessCtx)
 	})
-	return response, err
+
+	if err != nil {
+		return nil, err
+	}
+	return &responseUser, nil
 }
 
 func (uc *userUsecase) GetAllUsers(ctx context.Context) (*[]model.UserResponseDTO, error) {

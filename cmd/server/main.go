@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/coop-forex-server/configs"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/router"
@@ -41,6 +42,12 @@ func main() {
 	timeout := configs.Timeout
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 	router.RouterSetup(timeout, db, r)
 
 	if err := r.Run(":8080"); err != nil {
