@@ -15,5 +15,5 @@ type AccountTypes struct {
 	UpdatedAt time.Time           `json:"updated_at" bson:"updated_at"`
 	DeletedAt *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	DeletedBy *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
-	IsDeleted bool                `json:"-" bson:"is_deleted"`
+	IsDeleted bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
 }

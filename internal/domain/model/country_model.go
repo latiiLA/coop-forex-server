@@ -17,5 +17,5 @@ type Country struct {
 	DeletedBy  *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt  *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	VisaStatus bool                `json:"visa_status" bson:"visa_status"`
-	IsDeleted  bool                `json:"-" bson:"is_deleted"`
+	IsDeleted  bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
 }

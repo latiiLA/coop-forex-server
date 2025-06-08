@@ -20,7 +20,7 @@ type User struct {
 	UpdatedBy *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	IsDeleted bool                `json:"is_deleted,omitempty" bson:"is_deleted,omitempty"`
+	IsDeleted bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
 }
 
 type RegisterRequestDTO struct {
@@ -36,12 +36,13 @@ type RegisterRequestDTO struct {
 }
 
 type UpdateRequestDTO struct {
-	Username     string              `json:"username" binding:"required,min=3"`
-	FirstName    string              `json:"first_name" binding:"required,min=3"`
-	MiddleName   string              `json:"middle_name" binding:"required,min=3"`
-	LastName     string              `json:"last_name" binding:"required,min=3"`
-	Email        string              `json:"email" binding:"required"`
-	Role         primitive.ObjectID  `json:"role" binding:"required"`
+	Username     string              `json:"username"`
+	Password     string              `json:"password"`
+	FirstName    string              `json:"first_name"`
+	MiddleName   string              `json:"middle_name"`
+	LastName     string              `json:"last_name"`
+	Email        string              `json:"email"`
+	Role         primitive.ObjectID  `json:"role"`
 	DepartmentID *primitive.ObjectID `json:"department_id"`
 	BranchID     *primitive.ObjectID `json:"branch_id"`
 }
@@ -78,14 +79,14 @@ type UserResponseDTO struct {
 	UpdatedBy    *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy    *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt    *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	IsDeleted    bool                `json:"is_deleted,omitempty" bson:"is_deleted,omitempty"`
+	IsDeleted    bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
 }
 
 type UserRepository interface {
 	Create(c context.Context, user *User) error
 	FindByUsername(c context.Context, username string) (*User, error)
 	FindAll(c context.Context) (*[]UserResponseDTO, error)
-	FindByID(c context.Context, user_id primitive.ObjectID) (*UserResponseDTO, error)
-	Update(c context.Context, user_id primitive.ObjectID, user *User) (*UserResponseDTO, error)
+	FindByID(c context.Context, user_id primitive.ObjectID) (*User, error)
+	Update(c context.Context, user_id primitive.ObjectID, user *User) (*User, error)
 	Delete(c context.Context, user_id primitive.ObjectID, user *User) error
 }

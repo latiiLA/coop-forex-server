@@ -48,5 +48,5 @@ type Request struct {
 	ResultProcessedBy         *primitive.ObjectID `json:"result_processed_by,omitempty" bson:"result_processed_by,omitempty"`
 	DeletedBy                 *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt                 *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	IsDeleted                 bool                `json:"-" bson:"is_deleted"`
+	IsDeleted                 bool                `json:"id_deleted,omitempty" bson:"is_deleted"`
 }

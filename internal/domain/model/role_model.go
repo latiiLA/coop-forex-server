@@ -16,7 +16,7 @@ type Role struct {
 	UpdatedBy *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	IsDeleted bool                `json:"is_deleted,omitempty" bson:"is_deleted,omitempty"`
+	IsDeleted bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
 }
 
 type RoleRepository interface {
