@@ -144,8 +144,6 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, err
 	}
 
-	fmt.Println("profile", profile)
-
 	response := model.LoginResponseDTO{
 		ID:         existingUser.ID,
 		FirstName:  profile.FirstName,
@@ -204,22 +202,44 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 			existingProfile.LastName = user.LastName
 		}
 		if user.Email != "" {
+			existingProfileByEmail, err := uc.profileRepository.FindByEmail(sessCtx, user.Email)
+			if err != nil && err != mongo.ErrNoDocuments {
+				return err
+			}
+			if existingProfileByEmail != nil && existingProfileByEmail.ID != user_id {
+				return errors.New("email already exists")
+			}
 			existingProfile.Email = user.Email
 		}
 		if user.BranchID != &primitive.NilObjectID {
+			existingProfile.DepartmentID = nil
 			existingProfile.BranchID = user.BranchID
 		}
 		if user.DepartmentID != &primitive.NilObjectID {
+			existingProfile.BranchID = nil
 			existingProfile.DepartmentID = user.DepartmentID
 		}
-		existingProfile.UpdatedAt = time.Now()
 
 		// Populate user
 		if user.Role != primitive.NilObjectID {
 			existingUser.RoleID = user.Role
 		}
 		if user.Username != "" {
-			existingUser.UpdatedBy = &authUserID
+			existingUserByUsername, err := uc.userRepository.FindByUsername(sessCtx, user.Username)
+			if err != nil && err != mongo.ErrNoDocuments {
+				return err
+			}
+			if existingUserByUsername != nil && existingUserByUsername.ID != user_id {
+				return errors.New("username already exists")
+			}
+			existingUser.Username = user.Username
+		}
+		if user.Password != "" {
+			encrytedPassword, err := infrastructure.HashPassword(user.Password)
+			if err != nil {
+				return err
+			}
+			existingUser.Password = encrytedPassword
 		}
 		existingUser.UpdatedBy = &authUserID
 		existingUser.UpdatedAt = time.Now()
