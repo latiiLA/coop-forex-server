@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,4 +19,15 @@ type Country struct {
 	DeletedBy  *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt  *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	IsDeleted  bool                `json:"-" bson:"is_deleted"`
+}
+
+type CountryResponseDTO struct {
+}
+
+type CountryRepository interface {
+	Create(ctx context.Context, country *Country) error
+	FindByID(ctx context.Context, country_id primitive.ObjectID) (*Country, error)
+	FindAll(ctx context.Context) ([]Country, error)
+	Update(ctx context.Context, country_id primitive.ObjectID, country *Country) (*Country, error)
+	Delete(ctx context.Context, country_id primitive.ObjectID) error
 }
