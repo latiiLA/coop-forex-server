@@ -36,14 +36,15 @@ type RegisterRequestDTO struct {
 }
 
 type UpdateRequestDTO struct {
-	Username     string              `json:"username" binding:"required,min=3"`
-	FirstName    string              `json:"first_name" binding:"required,min=3"`
-	MiddleName   string              `json:"middle_name" binding:"required,min=3"`
-	LastName     string              `json:"last_name" binding:"required,min=3"`
-	Email        string              `json:"email" binding:"required"`
-	Role         primitive.ObjectID  `json:"role" binding:"required"`
-	DepartmentID *primitive.ObjectID `json:"department_id"`
-	BranchID     *primitive.ObjectID `json:"branch_id"`
+	Username     string              `json:"username" binding:"omitempty,min=3"`
+	Password     string              `json:"password" binding:"omitempty,alphanum,min=6"`
+	FirstName    string              `json:"first_name" binding:"omitempty,min=3"`
+	MiddleName   string              `json:"middle_name" binding:"omitempty,min=3"`
+	LastName     string              `json:"last_name" binding:"omitempty,min=3"`
+	Email        string              `json:"email" binding:"omitempty"`
+	Role         primitive.ObjectID  `json:"role" binding:"omitempty"`
+	DepartmentID *primitive.ObjectID `json:"department_id" binding:"omitempty"`
+	BranchID     *primitive.ObjectID `json:"branch_id" binding:"omitempty"`
 }
 
 type LoginRequestDTO struct {
@@ -85,7 +86,7 @@ type UserRepository interface {
 	Create(c context.Context, user *User) error
 	FindByUsername(c context.Context, username string) (*User, error)
 	FindAll(c context.Context) (*[]UserResponseDTO, error)
-	FindByID(c context.Context, user_id primitive.ObjectID) (*UserResponseDTO, error)
-	Update(c context.Context, user_id primitive.ObjectID, user *User) (*UserResponseDTO, error)
+	FindByID(c context.Context, user_id primitive.ObjectID) (*User, error)
+	Update(c context.Context, user_id primitive.ObjectID, user *User) (*User, error)
 	Delete(c context.Context, user_id primitive.ObjectID, user *User) error
 }

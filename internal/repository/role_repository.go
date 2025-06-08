@@ -28,7 +28,7 @@ func (rr *roleRepository) Create(ctx context.Context, role *model.Role) error {
 }
 
 func (rr *roleRepository) FindByID(ctx context.Context, role_id primitive.ObjectID) (model.Role, error) {
-	filter := bson.M{"_id": role_id}
+	filter := bson.M{"_id": role_id, "is_deleted": false}
 	var role model.Role
 
 	err := rr.collection.FindOne(ctx, filter).Decode(&role)
@@ -42,7 +42,7 @@ func (rr *roleRepository) FindByID(ctx context.Context, role_id primitive.Object
 func (rr *roleRepository) FindAll(ctx context.Context) ([]model.Role, error) {
 	var roles []model.Role
 
-	cursor, err := rr.collection.Find(ctx, bson.M{})
+	cursor, err := rr.collection.Find(ctx, bson.M{"is_deleted": false})
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +52,11 @@ func (rr *roleRepository) FindAll(ctx context.Context) ([]model.Role, error) {
 		return nil, err
 	}
 
-	return roles, err
+	return roles, nil
 }
 
 func (rr *roleRepository) ExistsRoleByName(ctx context.Context, name string) (bool, error) {
-	filter := bson.M{"name": name}
+	filter := bson.M{"name": name, "is_deleted": false}
 
 	var result model.Role
 

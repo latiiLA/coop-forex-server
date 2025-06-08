@@ -41,7 +41,7 @@ func (rc *roleController) AddRole(c *gin.Context) {
 		return
 	}
 
-	if len(role.Type) < 3 {
+	if len(role.Name) < 3 {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "Role name too short"})
 		return
 	}

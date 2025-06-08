@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jinzhu/copier"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,7 +17,7 @@ import (
 type UserUsecase interface {
 	Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterRequestDTO) error
 	Login(c context.Context, userReq model.LoginRequestDTO) (*model.LoginResponseDTO, error)
-	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.UserResponseDTO, error)
+	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.User, error)
 	UpdateUserByID(c context.Context, userID primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateRequestDTO) (*model.UserResponseDTO, error)
 	GetAllUsers(c context.Context) (*[]model.UserResponseDTO, error)
 }
@@ -85,6 +86,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 
 		err = uc.profileRepository.Create(ctx, profile)
 		if err != nil {
+			session.AbortTransaction(sessCtx)
 			return err
 		}
 
@@ -107,7 +109,6 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 		}
 
 		return session.CommitTransaction(sessCtx)
-
 	})
 	return err
 }
@@ -133,7 +134,7 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, errors.New("role not found")
 	}
 
-	accessToken, err := infrastructure.GenerateToken(existingUser.ID, role.Type)
+	accessToken, err := infrastructure.GenerateToken(existingUser.ID, role.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -143,21 +144,19 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, err
 	}
 
-	fmt.Println("profile", profile)
-
 	response := model.LoginResponseDTO{
 		ID:         existingUser.ID,
 		FirstName:  profile.FirstName,
 		MiddleName: profile.LastName,
 		Username:   existingUser.Username,
-		Role:       role.Type,
+		Role:       role.Name,
 		Token:      accessToken,
 	}
 
 	return &response, nil
 }
 
-func (uc *userUsecase) GetUserByID(ctx context.Context, user_id primitive.ObjectID) (*model.UserResponseDTO, error) {
+func (uc *userUsecase) GetUserByID(ctx context.Context, user_id primitive.ObjectID) (*model.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
 	defer cancel()
 	return uc.userRepository.FindByID(ctx, user_id)
@@ -167,30 +166,106 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
 	defer cancel()
 
-	// populate profile
-	profile := &model.Profile{
-		FirstName:    user.FirstName,
-		MiddleName:   user.MiddleName,
-		LastName:     user.LastName,
-		Email:        user.Email,
-		DepartmentID: user.DepartmentID,
-		BranchID:     user.BranchID,
-		UpdatedAt:    time.Now(),
-	}
-
-	err := uc.profileRepository.Create(ctx, profile)
+	// start MongoDB session
+	session, err := uc.client.StartSession()
 	if err != nil {
 		return nil, err
 	}
+	defer session.EndSession(ctx)
 
-	updatedUser := &model.User{
-		RoleID:    user.Role,
-		Username:  user.Username,
-		UpdatedBy: &authUserID,
-		UpdatedAt: time.Now(),
+	responseUser := model.UserResponseDTO{}
+
+	// Run everything in the transaction
+	err = mongo.WithSession(ctx, session, func(sessCtx mongo.SessionContext) error {
+		if err := session.StartTransaction(); err != nil {
+			return err
+		}
+
+		existingUser, err := uc.userRepository.FindByID(sessCtx, user_id)
+		if err != nil {
+			return err
+		}
+
+		existingProfile, err := uc.profileRepository.FindByID(sessCtx, existingUser.ProfileID)
+		if err != nil {
+			return err
+		}
+
+		// Populate profile
+		if user.FirstName != "" {
+			existingProfile.FirstName = user.FirstName
+		}
+		if user.MiddleName != "" {
+			existingProfile.MiddleName = user.MiddleName
+		}
+		if user.LastName != "" {
+			existingProfile.LastName = user.LastName
+		}
+		if user.Email != "" {
+			existingProfileByEmail, err := uc.profileRepository.FindByEmail(sessCtx, user.Email)
+			if err != nil && err != mongo.ErrNoDocuments {
+				return err
+			}
+			if existingProfileByEmail != nil && existingProfileByEmail.ID != user_id {
+				return errors.New("email already exists")
+			}
+			existingProfile.Email = user.Email
+		}
+		if user.BranchID != &primitive.NilObjectID {
+			existingProfile.DepartmentID = nil
+			existingProfile.BranchID = user.BranchID
+		}
+		if user.DepartmentID != &primitive.NilObjectID {
+			existingProfile.BranchID = nil
+			existingProfile.DepartmentID = user.DepartmentID
+		}
+
+		// Populate user
+		if user.Role != primitive.NilObjectID {
+			existingUser.RoleID = user.Role
+		}
+		if user.Username != "" {
+			existingUserByUsername, err := uc.userRepository.FindByUsername(sessCtx, user.Username)
+			if err != nil && err != mongo.ErrNoDocuments {
+				return err
+			}
+			if existingUserByUsername != nil && existingUserByUsername.ID != user_id {
+				return errors.New("username already exists")
+			}
+			existingUser.Username = user.Username
+		}
+		if user.Password != "" {
+			encrytedPassword, err := infrastructure.HashPassword(user.Password)
+			if err != nil {
+				return err
+			}
+			existingUser.Password = encrytedPassword
+		}
+		existingUser.UpdatedBy = &authUserID
+		existingUser.UpdatedAt = time.Now()
+
+		// Database update for both profile and user
+		updateProfile, err := uc.profileRepository.Update(sessCtx, existingUser.ProfileID, existingProfile)
+		if err != nil {
+			session.AbortTransaction(sessCtx)
+			return err
+		}
+
+		updatedUser, err := uc.userRepository.Update(sessCtx, user_id, existingUser)
+		if err != nil {
+			session.AbortTransaction(sessCtx)
+			return err
+		}
+
+		copier.Copy(&responseUser, updatedUser)
+		copier.Copy(&responseUser, updateProfile)
+		return session.CommitTransaction(sessCtx)
+	})
+
+	if err != nil {
+		return nil, err
 	}
-
-	return uc.userRepository.Update(ctx, user_id, updatedUser)
+	return &responseUser, nil
 }
 
 func (uc *userUsecase) GetAllUsers(ctx context.Context) (*[]model.UserResponseDTO, error) {

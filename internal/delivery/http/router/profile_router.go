@@ -14,8 +14,10 @@ import (
 
 func NewProfileRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
 	profileRepo := repository.NewProfileRepository(db, timeout)
-	profileUsecase := usecase.NewProfileUsecase(profileRepo, timeout)
 	userRepo := repository.NewUserRepository(db, timeout)
+
+	profileUsecase := usecase.NewProfileUsecase(profileRepo, userRepo, timeout)
+
 	roleRepo := repository.NewRoleRepository(db, timeout)
 	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout, db.Client())
 	profileController := controller.NewProfileController(profileUsecase, userUsecase)

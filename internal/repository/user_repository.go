@@ -29,7 +29,7 @@ func (ur *userRepository) Create(ctx context.Context, user *model.User) error {
 }
 
 func (ur *userRepository) FindByUsername(ctx context.Context, username string) (*model.User, error) {
-	filter := bson.M{"username": username}
+	filter := bson.M{"username": username, "is_deleted": false}
 	var user model.User
 
 	err := ur.collection.FindOne(ctx, filter).Decode(&user)
@@ -40,9 +40,9 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 	return &user, nil
 }
 
-func (ur *userRepository) FindByID(ctx context.Context, user_id primitive.ObjectID) (*model.UserResponseDTO, error) {
-	filter := bson.M{"_id": user_id}
-	var user model.UserResponseDTO
+func (ur *userRepository) FindByID(ctx context.Context, user_id primitive.ObjectID) (*model.User, error) {
+	filter := bson.M{"_id": user_id, "is_deleted": false}
+	var user model.User
 
 	err := ur.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
@@ -50,20 +50,6 @@ func (ur *userRepository) FindByID(ctx context.Context, user_id primitive.Object
 	}
 
 	return &user, nil
-
-	// var users []model.UserResponseDTO
-
-	// cursor, err := ur.collection.Find(ctx, bson.M{})
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer cursor.Close(ctx)
-
-	// if err := cursor.All(ctx, &users); err != nil {
-	// 	return nil, err
-	// }
-
-	// return &users, err
 }
 
 func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO, error) {
@@ -112,13 +98,11 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 		return nil, err
 	}
 
-	fmt.Println("users", users)
-
 	return &users, nil
 }
 
-func (ur *userRepository) Update(ctx context.Context, user_id primitive.ObjectID, user *model.User) (*model.UserResponseDTO, error) {
-	filter := bson.M{"_id": user_id}
+func (ur *userRepository) Update(ctx context.Context, user_id primitive.ObjectID, user *model.User) (*model.User, error) {
+	filter := bson.M{"_id": user_id, "is_deleted": false}
 
 	result, err := ur.collection.UpdateOne(ctx, filter, bson.M{"$set": user})
 
@@ -134,7 +118,7 @@ func (ur *userRepository) Update(ctx context.Context, user_id primitive.ObjectID
 		return nil, fmt.Errorf("no changes were made")
 	}
 
-	var updatedUser model.UserResponseDTO
+	var updatedUser model.User
 	err = ur.collection.FindOne(ctx, filter).Decode(&updatedUser)
 	if err != nil {
 		return nil, err
@@ -144,8 +128,8 @@ func (ur *userRepository) Update(ctx context.Context, user_id primitive.ObjectID
 }
 
 func (ur *userRepository) Delete(ctx context.Context, user_id primitive.ObjectID, user *model.User) error {
-	filter := bson.M{"_id": user_id}
-	update := bson.M{"is_deleted": true}
+	filter := bson.M{"_id": user_id, "is_deleted": false}
+	update := bson.M{"is_deleted": true, "status": "deleted"}
 
 	result, err := ur.collection.UpdateOne(ctx, filter, update)
 

@@ -10,17 +10,17 @@ type Request struct {
 	ID                        primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	BranchID                  primitive.ObjectID  `json:"branch_id" bson:"branch_id"`
 	RequestCode               string              `json:"request_code" bson:"request_code"`
-	RequestedCurrency         primitive.ObjectID  `json:"requested_currency" bson:"requested_currency"`
 	ApplicantName             string              `json:"applicant_name" bson:"applicant_name"`
 	ApplicantAccountNumber    []string            `json:"applicant_account_number" bson:"applicant_account_number"`
 	AverageDeposit            float64             `json:"average_deposit" bson:"average_deposit"`
-	AccountOpenDate           time.Time           `json:"account_open_date" bson:"account_open_date"`
-	FcyPerformance            string              `json:"fcy_performance" bson:"fcy_performance"`
+	TotalFcyGenerated         time.Time           `json:"total_fcy_generated" bson:"total_fcy_generated"`
+	CurrentFcyPerformance     string              `json:"current_fcy_performance" bson:"current_fcy_performance"`
 	TravelPurpose             primitive.ObjectID  `json:"travel_purpose" bson:"travel_purpose"`
 	TravelCountry             primitive.ObjectID  `json:"travel_country" bson:"travel_country"`
 	AccountType               primitive.ObjectID  `json:"account_type" bson:"account_type"`
 	AccountCurrency           primitive.ObjectID  `json:"account_currency" bson:"account_currency"`
 	DeductionAccount          []string            `json:"deduction_account" bson:"deduction_account"`
+	FcyCurrencyRequested      primitive.ObjectID  `json:"fcy_currency_request" bson:"fcy_currecy_request"`
 	FcyAmountRequested        float64             `json:"fcy_amount_requested" bson:"fcy_amount_requested"`
 	CashAcceptanceMode        string              `json:"cash_acceptance_mode" bson:"cash_acceptance_mode"`
 	CardAssociatedAccount     *string             `json:"cash_associated_account,omitempty" bson:"cash_associated_account,omitempty"`
