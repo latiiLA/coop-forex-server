@@ -13,15 +13,26 @@ import (
 )
 
 func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
-	userRepo := repository.NewUserRepository(db, timeout)
-	roleRepo := repository.NewRoleRepository(db, timeout)
-	profileRepo := repository.NewProfileRepository(db, timeout)
+	userRepo := repository.NewUserRepository(db)
+	roleRepo := repository.NewRoleRepository(db)
+	profileRepo := repository.NewProfileRepository(db)
 	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout, db.Client())
 	userController := controller.NewUserController(userUsecase)
 
+	// middleware.AuthorizeRoles("admin")
+
+	//  middleware.JwtAuthMiddleware(configs.JwtSecret)
+
 	group.POST("/login", userController.Login)
-	group.POST("/register", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.Register)
-	group.GET("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.GetAllUsers)
+	group.POST("/register", userController.Register)
+	group.GET("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), userController.GetAllUsers)
 	group.PUT("/users/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.UpdateUser)
 	// group.PATCH("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.DeleteUser)
+
+	// LDAP configuration
+
+	// authUsecase := usecase.NewLDAPAuthUsecase(configs.LDAPHost, configs.LDAPPort, configs.LDAPBaseDN, configs.LDAPBindUser, configs.LDAPBindPassword)
+	// authController := controller.NewAuthController(authUsecase)
+	// group.POST("/login", authController.Login)
+	// group.POST("/register", userController.Register)
 }
