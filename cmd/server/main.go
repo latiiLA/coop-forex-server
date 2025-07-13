@@ -41,7 +41,16 @@ func main() {
 	db := client.Database("coop_forex_db")
 	timeout := configs.Timeout
 
+	// Run migrations
+	if configs.DisableMigration != "true" {
+		if err := RunMigrations(); err != nil {
+			log.Fatalf("❌ Migration failed: %v", err)
+		}
+		fmt.Println("✅ Database migration completed.")
+	}
+
 	r := gin.Default()
+	r.Static("/uploads", "./uploads")
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
