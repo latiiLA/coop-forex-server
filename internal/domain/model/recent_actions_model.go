@@ -12,5 +12,5 @@ type RecentAction struct {
 	Type        string             `json:"type" bson:"type"`
 	Description string             `json:"description" bson:"description"`
 	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`
-	UpdatedAt   time.Time          `json:"updated_at" bson:"update_at"`
+	UpdatedAt   time.Time          `json:"updated_at" bson:"updated_at"`
 }
