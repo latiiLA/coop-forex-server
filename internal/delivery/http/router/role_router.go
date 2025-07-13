@@ -11,10 +11,10 @@ import (
 )
 
 func NewRoleRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
-	roleRepo := repository.NewRoleRepository(db, timeout)
+	roleRepo := repository.NewRoleRepository(db)
 	roleUsecase := usecase.NewRoleUsecase(roleRepo, timeout)
 	roleController := controller.NewRoleController(roleUsecase)
 
 	group.POST("/role", roleController.AddRole)
-	group.GET("/role", roleController.GetAllRoles)
+	group.GET("/roles", roleController.GetAllRoles)
 }
