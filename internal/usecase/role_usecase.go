@@ -11,7 +11,7 @@ import (
 
 type RoleUsecase interface {
 	AddRole(ctx context.Context, userID primitive.ObjectID, role *model.Role) error
-	GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (model.Role, error)
+	GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (*model.Role, error)
 	GetAllRoles(ctx context.Context) ([]model.Role, error)
 }
 
@@ -52,7 +52,7 @@ func (ru *roleUsecase) AddRole(ctx context.Context, userID primitive.ObjectID, r
 	return ru.roleRepository.Create(ctx, role)
 }
 
-func (ru *roleUsecase) GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (model.Role, error) {
+func (ru *roleUsecase) GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (*model.Role, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 	return ru.roleRepository.FindByID(ctx, role_id)
