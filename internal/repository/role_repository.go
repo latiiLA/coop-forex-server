@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,13 +11,11 @@ import (
 
 type roleRepository struct {
 	collection *mongo.Collection
-	timeout    time.Duration
 }
 
-func NewRoleRepository(db *mongo.Database, timeout time.Duration) model.RoleRepository {
+func NewRoleRepository(db *mongo.Database) model.RoleRepository {
 	return &roleRepository{
 		collection: db.Collection("roles"),
-		timeout:    timeout,
 	}
 }
 
@@ -27,16 +24,16 @@ func (rr *roleRepository) Create(ctx context.Context, role *model.Role) error {
 	return err
 }
 
-func (rr *roleRepository) FindByID(ctx context.Context, role_id primitive.ObjectID) (model.Role, error) {
-	filter := bson.M{"_id": role_id, "is_deleted": false}
+func (rr *roleRepository) FindByID(ctx context.Context, role_id primitive.ObjectID) (*model.Role, error) {
 	var role model.Role
+	filter := bson.M{"_id": role_id, "is_deleted": false}
 
 	err := rr.collection.FindOne(ctx, filter).Decode(&role)
 	if err != nil {
-		return model.Role{}, err
+		return nil, err
 	}
 
-	return role, nil
+	return &role, nil
 }
 
 func (rr *roleRepository) FindAll(ctx context.Context) ([]model.Role, error) {
