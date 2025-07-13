@@ -10,7 +10,9 @@ import (
 type User struct {
 	ID        primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	RoleID    primitive.ObjectID  `json:"role_id" bson:"role_id"`
+	Role      *Role               `json:"role,omitempty" bson:"role,omitempty"`
 	ProfileID primitive.ObjectID  `json:"profile_id" bson:"profile_id"`
+	Profile   *Profile            `json:"profile,omitempty" bson:"profile,omitempty"`
 	Username  string              `json:"username" bson:"username"`
 	Password  string              `json:"-" bson:"password"`
 	Status    string              `json:"status" bson:"status"`
@@ -20,7 +22,7 @@ type User struct {
 	UpdatedBy *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	IsDeleted bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
+	IsDeleted bool                `json:"is_deleted" bson:"is_deleted"`
 }
 
 type RegisterRequestDTO struct {
@@ -62,24 +64,20 @@ type LoginResponseDTO struct {
 }
 
 type UserResponseDTO struct {
-	ID           primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
-	RoleID       primitive.ObjectID  `json:"role_id" bson:"role_id"`
-	ProfileID    primitive.ObjectID  `json:"profile_id" bson:"profile_id"`
-	Username     string              `json:"username" bson:"username"`
-	Email        string              `json:"email" bson:"email"`
-	Status       string              `json:"status" bson:"status"`
-	FirstName    *string             `json:"first_name" bson:"first_name"`
-	MiddleName   *string             `json:"middle_name" bson:"middle_name"`
-	LastName     *string             `json:"last_name" bson:"last_name"`
-	DepartmentID *primitive.ObjectID `json:"department_id" bson:"department_id"`
-	BranchID     *primitive.ObjectID `json:"branch_id" bson:"branch_id"`
-	CreatedAt    time.Time           `json:"created_at" bson:"created_at"`
-	UpdatedAt    time.Time           `json:"updated_at" bson:"updated_at"`
-	CreatedBy    *primitive.ObjectID `json:"created_by" bson:"created_by"`
-	UpdatedBy    *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
-	DeletedBy    *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
-	DeletedAt    *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	IsDeleted    bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
+	ID         primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
+	Role       Role               `json:"role" bson:"role"`
+	Profile    Profile            `json:"profile" bson:"profile"`
+	Username   string             `json:"username" bson:"username"`
+	Status     string             `json:"status" bson:"status"`
+	Department *Department        `json:"department,omitempty" bson:"department,omitempty"`
+	Branch     *Branch            `json:"branch,omitempty" bson:"branch,omitempty"`
+	CreatedAt  time.Time          `json:"created_at" bson:"created_at"`
+	UpdatedAt  time.Time          `json:"updated_at" bson:"updated_at"`
+	CreatedBy  string             `json:"created_by" bson:"created_by"`
+	UpdatedBy  *string            `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
+	DeletedBy  *string            `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
+	DeletedAt  *time.Time         `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
+	IsDeleted  bool               `json:"is_deleted" bson:"is_deleted"`
 }
 
 type UserRepository interface {
