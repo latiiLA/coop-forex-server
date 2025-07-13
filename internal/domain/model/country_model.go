@@ -9,16 +9,17 @@ import (
 
 type Country struct {
 	ID         primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
+	CountryID  int32               `json:"id,omitempty" bson:"id,omitempty"`
 	Name       string              `json:"name" bson:"name"`
 	ShortCode  string              `json:"short_code" bson:"short_code"`
-	VisaStatus string              `json:"visa_status" bson:"visa_status"`
+	VisaStatus bool                `json:"visa_status" bson:"visa_status"`
 	CreatedAt  time.Time           `json:"created_at" bson:"created_at"`
-	UpdatedAt  time.Time           `json:"updated_at" bson:"update_at"`
+	UpdatedAt  time.Time           `json:"updated_at" bson:"updated_at"`
 	CreatedBy  primitive.ObjectID  `json:"created_by" bson:"created_by"`
 	UpdatedBy  *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy  *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt  *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
-	IsDeleted  bool                `json:"-" bson:"is_deleted"`
+	IsDeleted  bool                `json:"is_deleted" bson:"is_deleted"`
 }
 
 type CountryResponseDTO struct {
