@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,13 +13,11 @@ import (
 
 type profileRepository struct {
 	collection *mongo.Collection
-	timeout    time.Duration
 }
 
-func NewProfileRepository(db *mongo.Database, timeout time.Duration) model.ProfileRepository {
+func NewProfileRepository(db *mongo.Database) model.ProfileRepository {
 	return &profileRepository{
 		collection: db.Collection("profiles"),
-		timeout:    timeout,
 	}
 }
 
