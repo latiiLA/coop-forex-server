@@ -13,12 +13,12 @@ import (
 )
 
 func NewProfileRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
-	profileRepo := repository.NewProfileRepository(db, timeout)
-	userRepo := repository.NewUserRepository(db, timeout)
+	profileRepo := repository.NewProfileRepository(db)
+	userRepo := repository.NewUserRepository(db)
 
 	profileUsecase := usecase.NewProfileUsecase(profileRepo, userRepo, timeout)
 
-	roleRepo := repository.NewRoleRepository(db, timeout)
+	roleRepo := repository.NewRoleRepository(db)
 	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout, db.Client())
 	profileController := controller.NewProfileController(profileUsecase, userUsecase)
 
