@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -13,13 +12,11 @@ import (
 
 type countryRepository struct {
 	collection *mongo.Collection
-	timeout    time.Duration
 }
 
-func NewCountryRepository(db *mongo.Database, timeout time.Duration) model.CountryRepository {
+func NewCountryRepository(db *mongo.Database) model.CountryRepository {
 	return &countryRepository{
 		collection: db.Collection("countries"),
-		timeout:    timeout,
 	}
 }
 
