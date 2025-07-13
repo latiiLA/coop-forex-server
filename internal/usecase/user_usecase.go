@@ -122,9 +122,11 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 
 	existingUser, err := uc.userRepository.FindByUsername(ctx, userReq.Username)
 	if err != nil {
-		fmt.Println("Invalid username or user")
+		fmt.Println("Invalid username or user", err)
 		return nil, errors.New("invalid username or password")
 	}
+
+	// fmt.Println("existing user", existingUser)
 
 	err = infrastructure.CheckPasswordHash(existingUser.Password, userReq.Password)
 	if err != nil {
@@ -132,27 +134,17 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, errors.New("invalid username or password")
 	}
 
-	role, err := uc.roleRepository.FindByID(ctx, existingUser.RoleID)
-	if err != nil {
-		return nil, errors.New("role not found")
-	}
-
-	accessToken, err := infrastructure.GenerateToken(existingUser.ID, role.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	profile, err := uc.profileRepository.FindByID(ctx, existingUser.ProfileID)
+	accessToken, err := infrastructure.GenerateToken(existingUser.ID, existingUser.Role.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	response := model.LoginResponseDTO{
 		ID:         existingUser.ID,
-		FirstName:  profile.FirstName,
-		MiddleName: profile.LastName,
+		FirstName:  existingUser.Profile.FirstName,
+		MiddleName: existingUser.Profile.MiddleName,
 		Username:   existingUser.Username,
-		Role:       role.Name,
+		Role:       existingUser.Role.Name,
 		Token:      accessToken,
 	}
 
