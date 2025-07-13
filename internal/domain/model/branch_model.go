@@ -19,5 +19,5 @@ type Branch struct {
 	DeletedAt         *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	DeletedBy         *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	IsResultProcessor bool                `json:"is_result_processor" bson:"is_result_processor"`
-	IsDeleted         bool                `json:"is_deleted,omitempty" bson:"is_deleted"`
+	IsDeleted         bool                `json:"is_deleted" bson:"is_deleted"`
 }
