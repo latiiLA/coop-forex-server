@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,4 +18,8 @@ type District struct {
 	DeletedBy *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	IsDeleted bool                `json:"is_deleted" bson:"is_deleted"`
+}
+
+type DistrictRepository interface {
+	FindAll(ctx context.Context) ([]District, error)
 }
