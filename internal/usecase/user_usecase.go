@@ -9,6 +9,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
+	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -134,18 +135,42 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		return nil, errors.New("invalid username or password")
 	}
 
-	accessToken, err := infrastructure.GenerateToken(existingUser.ID, existingUser.Role.Name)
+	var perms []string
+	if existingUser.Permissions != nil {
+		perms = *existingUser.Permissions
+	}
+
+	effectivePerms := utils.MergePermissions(existingUser.Role.Permissions, perms)
+
+	var branchID primitive.ObjectID
+	if existingUser.Profile.BranchID != nil {
+		branchID = *existingUser.Profile.BranchID
+	} else {
+		branchID = primitive.NilObjectID // fallback
+	}
+
+	var departmentID primitive.ObjectID
+	if existingUser.Profile.DepartmentID != nil {
+		departmentID = *existingUser.Profile.DepartmentID
+	} else {
+		departmentID = primitive.NilObjectID // fallback
+	}
+
+	accessToken, err := infrastructure.GenerateToken(existingUser.ID, existingUser.Role.Name, branchID, departmentID, effectivePerms)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Print("user permissions", perms, "role permissions", existingUser.Role.Permissions, "merged permissions", effectivePerms)
+
 	response := model.LoginResponseDTO{
-		ID:         existingUser.ID,
-		FirstName:  existingUser.Profile.FirstName,
-		MiddleName: existingUser.Profile.MiddleName,
-		Username:   existingUser.Username,
-		Role:       existingUser.Role.Name,
-		Token:      accessToken,
+		ID:          existingUser.ID,
+		FirstName:   existingUser.Profile.FirstName,
+		MiddleName:  existingUser.Profile.MiddleName,
+		Username:    existingUser.Username,
+		Role:        existingUser.Role.Name,
+		Permissions: effectivePerms,
+		Token:       accessToken,
 	}
 
 	return &response, nil
