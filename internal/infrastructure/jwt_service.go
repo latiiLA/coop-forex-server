@@ -5,20 +5,22 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/latiiLA/coop-forex-server/configs"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-var jwtSecret = []byte("This is my secret key")
-
-func GenerateToken(userID primitive.ObjectID, role string) (string, error) {
+func GenerateToken(userID primitive.ObjectID, role string, branchID primitive.ObjectID, departmentID primitive.ObjectID, permissions []string) (string, error) {
 	claims := jwt.MapClaims{
-		"userID": userID.Hex(),
-		"role":   role,
-		"exp":    time.Now().Add(time.Hour * 24).Unix(),
+		"userID":       userID.Hex(),
+		"role":         role,
+		"branchID":     branchID,
+		"departmentID": departmentID,
+		"permissions":  permissions,
+		"exp":          time.Now().Add(time.Hour * 24).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString([]byte(configs.JwtSecret))
 }
 
 func ValidateToken(tokenString string) (jwt.MapClaims, error) {
@@ -26,7 +28,7 @@ func ValidateToken(tokenString string) (jwt.MapClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return jwtSecret, nil
+		return []byte(configs.JwtSecret), nil
 	})
 
 	if err != nil || !token.Valid {
