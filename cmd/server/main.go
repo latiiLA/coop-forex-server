@@ -2,19 +2,48 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"io"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/latiiLA/coop-forex-server/configs"
+
+	configs "github.com/latiiLA/coop-forex-server/configs"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/router"
+	"github.com/latiiLA/coop-forex-server/internal/infrastructure/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	log "github.com/sirupsen/logrus"
 )
+
+func setupLogger() {
+	// Create log directory if not exists
+	if _, err := os.Stat("logs"); os.IsNotExist(err) {
+		os.Mkdir("logs", os.ModePerm)
+	}
+
+	// Open log file
+	file, err := os.OpenFile("logs/server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal("❌ Could not open log file:", err)
+	}
+
+	// Output to both file and stdout
+	multiWriter := io.MultiWriter(file, os.Stdout)
+	log.SetOutput(multiWriter)
+	log.SetFormatter(&log.JSONFormatter{})
+	logLevel, err := log.ParseLevel(configs.LogLevel)
+	if err != nil {
+		logLevel = log.InfoLevel
+	}
+	log.SetLevel(logLevel)
+}
 
 func main() {
 	configs.LoadConfig()
+	setupLogger()
+
 	ctx := context.TODO()
 
 	clientOptions := options.Client().ApplyURI(configs.MongoURL)
@@ -36,7 +65,7 @@ func main() {
 		log.Fatal("Ping error:", err)
 	}
 
-	fmt.Println("Connected to DB!")
+	log.Info("✅ Connected to DB!")
 
 	db := client.Database("coop_forex_db")
 	timeout := configs.Timeout
@@ -46,14 +75,23 @@ func main() {
 		if err := RunMigrations(); err != nil {
 			log.Fatalf("❌ Migration failed: %v", err)
 		}
-		fmt.Println("✅ Database migration completed.")
+		log.Info("✅ Database migration completed.")
 	}
 
+	// Start the routes
 	r := gin.Default()
-	r.Static("/uploads", "./uploads")
+
+	// add logger middleware
+	r.Use(middleware.RequestLogger())
+	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.RateLimitMiddleware())
+
+	r.Static("/uploads", "./uploads") // allow upload access
+
+	// Cors policy
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:4173", "http://localhost:5000", "http://10.1.15.177:5000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
