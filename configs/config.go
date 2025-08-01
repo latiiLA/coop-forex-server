@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -15,6 +14,15 @@ var (
 	Timeout          time.Duration
 	DisableMigration string
 	FileUploadPath   string
+	LogLevel         string
+
+	// Mail env
+	MailServer   string
+	MailUsername string
+	MailPassword string
+	MailPort     string
+	MailSender   string
+	MailReciever string
 
 	// Ldap configs
 	LDAPHost         string
@@ -60,6 +68,50 @@ func LoadConfig() {
 		log.Fatal("FILE_UPLOAD_PATH is required but not set")
 	}
 
+	LogLevel = os.Getenv("LOG_LEVEL")
+	if LogLevel == "" {
+		log.Fatal("LOG_LEVEL is required but not set")
+	}
+
+	// MAIL server
+
+	MailServer = os.Getenv("MAIL_SERVER")
+	if MailServer == "" {
+		log.Fatal("MAIL_SERVER is required but not set")
+	}
+
+	MailUsername = os.Getenv("MAIL_USERNAME")
+	if MailUsername == "" {
+		log.Fatal("MAIL_USERNAME is required but not set")
+	}
+
+	MailUsername = os.Getenv("MAIL_USERNAME")
+	if MailUsername == "" {
+		log.Fatal("MAIL_USERNAME is required but not set")
+	}
+
+	MailPassword = os.Getenv("MAIL_PASSWORD")
+	if MailPassword == "" {
+		log.Fatal("MAIL_PASSWORD is required but not set")
+	}
+
+	MailPort = os.Getenv("MAIL_PORT")
+	if MailPort == "" {
+		log.Fatal("MAIL_PORT is required but not set")
+	}
+
+	MailReciever = os.Getenv("MAIL_RECIEVER")
+	if MailReciever == "" {
+		log.Fatal("MAIL_RECIEVER is required but not set")
+	}
+
+	MailSender = os.Getenv("MAIL_SENDER")
+	if MailSender == "" {
+		log.Fatal("MAIL_SENDER is required but not set")
+	}
+
+	// LDAP env
+
 	LDAPHost = os.Getenv("LDAP_HOST")
 	if LDAPHost == "" {
 		log.Fatalf("LDAP Host is required but not set")
@@ -84,6 +136,4 @@ func LoadConfig() {
 	if LDAPBindPassword == "" {
 		log.Fatalf("LDAP bind password is required but not set")
 	}
-
-	fmt.Println(LDAPHost, LDAPPort, LDAPBaseDN, LDAPBindUser, LDAPBindPassword)
 }
