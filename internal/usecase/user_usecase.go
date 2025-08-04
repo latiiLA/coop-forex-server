@@ -18,7 +18,7 @@ type UserUsecase interface {
 	Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterRequestDTO) error
 	Login(c context.Context, userReq model.LoginRequestDTO) (*model.LoginResponseDTO, error)
 	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.User, error)
-	UpdateUserByID(c context.Context, userID primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateRequestDTO) (*model.UserResponseDTO, error)
+	UpdateUserByID(c context.Context, userID primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateUserRequestDTO) (*model.UserResponseDTO, error)
 	GetAllUsers(c context.Context) (*[]model.UserResponseDTO, error)
 }
 
@@ -182,7 +182,7 @@ func (uc *userUsecase) GetUserByID(ctx context.Context, user_id primitive.Object
 	return uc.userRepository.FindByID(ctx, user_id)
 }
 
-func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateRequestDTO) (*model.UserResponseDTO, error) {
+func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateUserRequestDTO) (*model.UserResponseDTO, error) {
 	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
 	defer cancel()
 
