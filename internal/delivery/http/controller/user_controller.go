@@ -8,6 +8,7 @@ import (
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"github.com/latiiLA/coop-forex-server/internal/usecase"
+	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -55,17 +56,25 @@ func (uc *userController) Register(c *gin.Context) {
 func (uc *userController) Login(c *gin.Context) {
 	var userReq model.LoginRequestDTO
 
+	logEntry := utils.GetLogger(c)
+
 	err := c.ShouldBindJSON(&userReq)
 	if err != nil {
+		logEntry.WithField("error", err.Error()).Warn("Invalid login payload")
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
+	logEntry.WithField("username", userReq.Username).Debug("Login attempt")
+
 	user, err := uc.userUsecase.Login(c, userReq)
 	if err != nil {
+		log.WithField("error", err.Error()).Warn("Login failed")
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
 	}
+
+	logEntry.Info("Login Successful")
 
 	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Login successful", Data: user})
 }
@@ -101,7 +110,7 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var updateData model.UpdateRequestDTO
+	var updateData model.UpdateUserRequestDTO
 	err = c.ShouldBindJSON(&updateData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})

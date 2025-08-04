@@ -68,6 +68,11 @@ func Up(ctx context.Context, db *mongo.Database) error {
 		return err
 	}
 
+	log.Println("🌱 Seeding branches...")
+	if err := seedBranches(ctx, db); err != nil {
+		return err
+	}
+
 	log.Println("✅ All migrations applied successfully.")
 	return nil
 }

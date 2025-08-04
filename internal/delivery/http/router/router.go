@@ -38,4 +38,10 @@ func RouterSetup(timeout time.Duration, db *mongo.Database, router *gin.Engine) 
 
 	requestRouter := router.Group("")
 	NewRequestRouter(db, timeout, requestRouter)
+
+	districtRouter := router.Group("")
+	NewDistrictRouter(db, timeout, districtRouter)
+
+	branchRouter := router.Group("")
+	NewBranchRouter(db, timeout, branchRouter)
 }

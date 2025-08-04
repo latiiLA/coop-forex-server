@@ -59,8 +59,13 @@ func Down(ctx context.Context, db *mongo.Database) error {
 		return err
 	}
 
-	log.Println("🌱 Unseeding deparments...")
+	log.Println("🌱 Unseeding departments...")
 	if err := unseedDepartments(ctx, db); err != nil {
+		return err
+	}
+
+	log.Println("🌱 Unseeding branches...")
+	if err := unseedBranches(ctx, db); err != nil {
 		return err
 	}
 

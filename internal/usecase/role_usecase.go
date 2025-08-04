@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
@@ -10,9 +11,12 @@ import (
 )
 
 type RoleUsecase interface {
-	AddRole(ctx context.Context, userID primitive.ObjectID, role *model.Role) error
-	GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (*model.Role, error)
+	AddRole(ctx context.Context, authUserID primitive.ObjectID, role *model.Role) error
+	GetRoleByID(ctx context.Context, roleID primitive.ObjectID) (*model.Role, error)
 	GetAllRoles(ctx context.Context) ([]model.Role, error)
+	UpdateRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID, role *model.Role) error
+	DeleteRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID) error
+	GetDeletedRoles(ctx context.Context) ([]model.Role, error)
 }
 
 type roleUsecase struct {
@@ -27,7 +31,7 @@ func NewRoleUsecase(roleRepository model.RoleRepository, timeout time.Duration) 
 	}
 }
 
-func (ru *roleUsecase) AddRole(ctx context.Context, userID primitive.ObjectID, role *model.Role) error {
+func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectID, role *model.Role) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
@@ -46,7 +50,7 @@ func (ru *roleUsecase) AddRole(ctx context.Context, userID primitive.ObjectID, r
 	role.ID = primitive.NewObjectID()
 	role.CreatedAt = time.Now()
 	role.UpdatedAt = time.Now()
-	role.CreatedBy = userID
+	role.CreatedBy = authUserID
 	role.IsDeleted = false
 
 	return ru.roleRepository.Create(ctx, role)
@@ -62,4 +66,45 @@ func (ru *roleUsecase) GetAllRoles(ctx context.Context) ([]model.Role, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 	return ru.roleRepository.FindAll(ctx)
+}
+
+func (ru *roleUsecase) UpdateRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID, roleUpdated *model.Role) error {
+	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
+	defer cancel()
+
+	role, err := ru.roleRepository.FindByID(ctx, roleID)
+	if err != nil {
+		return fmt.Errorf("failed to find role by ID: %w", err)
+	}
+
+	now := time.Now().UTC()
+	role.Name = roleUpdated.Name
+	role.Permissions = roleUpdated.Permissions
+	role.UpdatedAt = now
+	role.UpdatedBy = &authUserID
+
+	return ru.roleRepository.Update(ctx, roleID, role)
+}
+
+func (ru *roleUsecase) DeleteRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
+	defer cancel()
+
+	role, err := ru.roleRepository.FindByID(ctx, roleID)
+	if err != nil {
+		return fmt.Errorf("failed to find role by ID: %w", err)
+	}
+
+	now := time.Now().UTC()
+	role.DeletedAt = &now
+	role.DeletedBy = &authUserID
+	role.IsDeleted = true
+
+	return ru.roleRepository.Delete(ctx, roleID, role)
+}
+
+func (ru *roleUsecase) GetDeletedRoles(ctx context.Context) ([]model.Role, error) {
+	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
+	defer cancel()
+	return ru.roleRepository.FindDeleted(ctx)
 }

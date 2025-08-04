@@ -12,10 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func NewCurrencyRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
-	currencyRepository := repository.NewCurrencyRepository(db)
-	currencyUsecase := usecase.NewCurrencyUsecase(currencyRepository, timeout)
-	currencyController := controller.NewCurrencyController(currencyUsecase)
+func NewDistrictRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
+	districtRepo := repository.NewDistrictRepository(db)
+	districtUsecase := usecase.NewDistrictUsecase(districtRepo, timeout)
+	districtController := controller.NewDistrictController(districtUsecase)
 
-	group.GET("/currencies", middleware.JwtAuthMiddleware(configs.JwtSecret), currencyController.GetAllCurrency)
+	group.GET("/districts", middleware.JwtAuthMiddleware(configs.JwtSecret), districtController.GetAllDistricts)
 }
