@@ -77,7 +77,7 @@ func (s *userRepositoryTestSuite) TestCreateUser() {
 }
 
 func (s *userRepositoryTestSuite) TestFindByID() {
-	user := &model.UserResponseDTO{
+	user := &model.User{
 		ID:        primitive.NewObjectID(),
 		Username:  "findbyuserid",
 		IsDeleted: false,
