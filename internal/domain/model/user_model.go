@@ -40,7 +40,7 @@ type RegisterRequestDTO struct {
 	BranchID     *primitive.ObjectID `json:"branch_id"`
 }
 
-type UpdateRequestDTO struct {
+type UpdateUserRequestDTO struct {
 	Username     string              `json:"username" binding:"omitempty,min=3"`
 	Password     string              `json:"password" binding:"omitempty,alphanum,min=6"`
 	FirstName    string              `json:"first_name" binding:"omitempty,min=3"`
