@@ -80,6 +80,13 @@ func main() {
 
 	// Start the routes
 	r := gin.Default()
+	// Cors policy
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:4173", "http://localhost:5000", "http://10.1.15.177:5000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}))
 
 	// add logger middleware
 	r.Use(middleware.RequestLogger())
@@ -88,13 +95,6 @@ func main() {
 
 	r.Static("/uploads", "./uploads") // allow upload access
 
-	// Cors policy
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:4173", "http://localhost:5000", "http://10.1.15.177:5000"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
-	}))
 	router.RouterSetup(timeout, db, r)
 
 	if err := r.Run(":8080"); err != nil {
