@@ -110,7 +110,7 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var updateData model.UpdateRequestDTO
+	var updateData model.UpdateUserRequestDTO
 	err = c.ShouldBindJSON(&updateData)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
