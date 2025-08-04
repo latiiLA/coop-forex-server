@@ -740,10 +740,14 @@ func (ur *userRepository) Update(ctx context.Context, user_id primitive.ObjectID
 
 func (ur *userRepository) Delete(ctx context.Context, user_id primitive.ObjectID, user *model.User) error {
 	filter := bson.M{"_id": user_id, "is_deleted": false}
-	update := bson.M{"is_deleted": true, "status": "deleted"}
+	update := bson.M{
+		"$set": bson.M{
+			"is_deleted": true,
+			"status":     "deleted",
+		},
+	}
 
 	result, err := ur.collection.UpdateOne(ctx, filter, update)
-
 	if err != nil {
 		return err
 	}
