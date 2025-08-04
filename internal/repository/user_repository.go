@@ -51,10 +51,102 @@ func (ur *userRepository) FindByUsername(ctx context.Context, username string) (
 			{Key: "path", Value: "$profile"},
 			{Key: "preserveNullAndEmptyArrays", Value: true},
 		}}},
+
+		// User - Creator
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "created_by"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "creator"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$creator"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// Lookup the profile with top-level as "creator"
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "profiles"},
+				{Key: "let", Value: bson.D{
+					{Key: "profile_id", Value: "$creator.profile_id"},
+				}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
+						}},
+					}}},
+				}},
+				{Key: "as", Value: "profileObj"},
+			}},
+		},
+
+		// Embed profile inside creator.profile
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "creator.profile", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
+			}},
+		}}},
+
+		// Remove top-level profileObj
+		bson.D{{Key: "$unset", Value: "profileObj"}},
+
+		// User - Updater
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "created_by"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "updater"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$updater"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// Lookup the profile with top-level as "updater"
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "profiles"},
+				{Key: "let", Value: bson.D{
+					{Key: "profile_id", Value: "$updater.profile_id"},
+				}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
+						}},
+					}}},
+				}},
+				{Key: "as", Value: "profileObj"},
+			}},
+		},
+
+		// Embed profile inside updater.profile
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "updater.profile", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
+			}},
+		}}},
+
+		// Remove top-level profileObj
+		bson.D{{Key: "$unset", Value: "profileObj"}},
+
 		bson.D{{Key: "$project", Value: bson.D{
 			{Key: "id", Value: "$_id"},
 			{Key: "username", Value: 1},
 			{Key: "password", Value: 1},
+			{Key: "permissions", Value: 1},
+			{Key: "creator", Value: 1},
+			{Key: "updater", Value: 1},
 			{Key: "role", Value: 1},
 			{Key: "profile", Value: 1},
 			{Key: "status", Value: 1},
@@ -203,6 +295,95 @@ func (ur *userRepository) FindByID(ctx context.Context, user_id primitive.Object
 				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
 		},
+
+		// User - Creator
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "created_by"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "creator"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$creator"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// Lookup the profile with top-level as "creator"
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "profiles"},
+				{Key: "let", Value: bson.D{
+					{Key: "profile_id", Value: "$creator.profile_id"},
+				}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
+						}},
+					}}},
+				}},
+				{Key: "as", Value: "profileObj"},
+			}},
+		},
+
+		// Embed profile inside creator.profile
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "creator.profile", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
+			}},
+		}}},
+
+		// Remove top-level profileObj
+		bson.D{{Key: "$unset", Value: "profileObj"}},
+
+		// User - Updater
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "created_by"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "updater"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$updater"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// Lookup the profile with top-level as "updater"
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "profiles"},
+				{Key: "let", Value: bson.D{
+					{Key: "profile_id", Value: "$updater.profile_id"},
+				}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
+						}},
+					}}},
+				}},
+				{Key: "as", Value: "profileObj"},
+			}},
+		},
+
+		// Embed profile inside updater.profile
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "updater.profile", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
+			}},
+		}}},
+
+		// Remove top-level profileObj
+		bson.D{{Key: "$unset", Value: "profileObj"}},
+
 		bson.D{
 			{Key: "$project", Value: bson.D{
 				{Key: "_id", Value: 1},
@@ -210,11 +391,14 @@ func (ur *userRepository) FindByID(ctx context.Context, user_id primitive.Object
 				{Key: "profile", Value: 1},
 				{Key: "username", Value: 1},
 				{Key: "status", Value: 1},
+				{Key: "permissions", Value: 1},
 				{Key: "department", Value: 1},
 				{Key: "branch", Value: 1},
 				{Key: "created_at", Value: 1},
 				{Key: "updated_at", Value: 1},
 				{Key: "created_by", Value: 1},
+				{Key: "creator", Value: 1},
+				{Key: "updater", Value: 1},
 				{Key: "updated_by", Value: 1},
 				{Key: "deleted_by", Value: 1},
 				{Key: "deleted_at", Value: 1},
@@ -368,16 +552,136 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
 		},
+
+		// Lookup the district with top-level as "branch"
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "districts"},
+				{Key: "let", Value: bson.D{
+					{Key: "districtId", Value: "$branch.district_id"},
+				}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$eq", Value: bson.A{"$_id", "$$districtId"}},
+						}},
+					}}},
+				}},
+				{Key: "as", Value: "districtObj"},
+			}},
+		},
+
+		// Embed district inside branch.district
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "branch.district", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$districtObj", 0}},
+			}},
+		}}},
+
+		// Remove top-level districtObj
+		bson.D{{Key: "$unset", Value: "districtObj"}},
+
+		// User - Creator
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "created_by"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "creator"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$creator"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// Lookup the profile with top-level as "creator"
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "profiles"},
+				{Key: "let", Value: bson.D{
+					{Key: "profile_id", Value: "$creator.profile_id"},
+				}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
+						}},
+					}}},
+				}},
+				{Key: "as", Value: "profileObj"},
+			}},
+		},
+
+		// Embed profile inside creator.profile
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "creator.profile", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
+			}},
+		}}},
+
+		// Remove top-level profileObj
+		bson.D{{Key: "$unset", Value: "profileObj"}},
+
+		// User - Updater
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "users"},
+				{Key: "localField", Value: "updated_by"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "updater"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$updater"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
+			}},
+		},
+
+		// Lookup the profile with top-level as "updater"
+		bson.D{
+			{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "profiles"},
+				{Key: "let", Value: bson.D{
+					{Key: "profile_id", Value: "$updater.profile_id"},
+				}},
+				{Key: "pipeline", Value: bson.A{
+					bson.D{{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
+						}},
+					}}},
+				}},
+				{Key: "as", Value: "profileObj"},
+			}},
+		},
+
+		// Embed profile inside updater.profile
+		bson.D{{Key: "$set", Value: bson.D{
+			{Key: "updater.profile", Value: bson.D{
+				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
+			}},
+		}}},
+
+		// Remove top-level profileObj
+		bson.D{{Key: "$unset", Value: "profileObj"}},
+
 		bson.D{
 			{Key: "$project", Value: bson.D{
 				{Key: "_id", Value: 1},
 				{Key: "role", Value: 1},
+				{Key: "permissions", Value: 1},
 				{Key: "profile", Value: 1},
 				{Key: "username", Value: 1},
 				{Key: "status", Value: 1},
 				{Key: "department", Value: 1},
 				{Key: "branch", Value: 1},
 				{Key: "created_at", Value: 1},
+				{Key: "creator", Value: 1},
+				{Key: "updater", Value: 1},
 				{Key: "updated_at", Value: 1},
 				{Key: "created_by", Value: 1},
 				{Key: "updated_by", Value: 1},
