@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type travelPurposeRepository struct {
@@ -31,7 +32,7 @@ func (tpr travelPurposeRepository) FindByID(ctx context.Context, travel_purpose_
 func (tpr travelPurposeRepository) FindAll(ctx context.Context) ([]model.TravelPurpose, error) {
 	var travel_purpose []model.TravelPurpose
 
-	cursor, err := tpr.collection.Find(ctx, bson.M{"is_deleted": false})
+	cursor, err := tpr.collection.Find(ctx, bson.M{"is_deleted": false}, options.Find().SetSort(bson.D{{Key: "purpose", Value: 1}}))
 	if err != nil {
 		return nil, err
 	}

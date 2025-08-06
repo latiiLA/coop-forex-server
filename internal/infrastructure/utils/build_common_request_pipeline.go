@@ -54,6 +54,7 @@ func BuildCommonRequestPipelineStages() mongo.Pipeline {
 			{Key: "fcy_requested_id", Value: 1},
 			{Key: "fcy_requested", Value: 1},
 			{Key: "branch_recommendation", Value: 1},
+			{Key: "rejection_reason", Value: 1},
 
 			{Key: "validated_average_deposit", Value: 1},
 			{Key: "validated_current_balance", Value: 1},
@@ -75,6 +76,7 @@ func BuildCommonRequestPipelineStages() mongo.Pipeline {
 
 			{Key: "created_at", Value: 1},
 			{Key: "updated_at", Value: 1},
+			{Key: "requested_at", Value: 1},
 			{Key: "validated_at", Value: 1},
 			{Key: "created_by", Value: 1},
 			{Key: "updated_by", Value: 1},
@@ -108,6 +110,7 @@ func BuildCommonRequestPipelineStages() mongo.Pipeline {
 	})
 
 	pipeline = append(pipeline, LookupUserWithProfile("created_by", "creater")...)
+	pipeline = append(pipeline, LookupUserWithProfile("requested_by", "requester")...)
 	pipeline = append(pipeline, LookupUserWithProfile("authorized_by", "authorizer")...)
 	pipeline = append(pipeline, LookupUserWithProfile("validated_by", "validater")...)
 	pipeline = append(pipeline, LookupUserWithProfile("approved_by", "approver")...)
