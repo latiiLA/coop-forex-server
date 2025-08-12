@@ -317,7 +317,7 @@ func seedCurrencies(ctx context.Context, db *mongo.Database) error {
 			"created_at": time.Now(),
 		},
 		{
-			"name":       "Costa Rican Colón",
+			"name":       "Costa Rican Colon",
 			"short_code": "CRC",
 			"updated_at": time.Now(),
 			"created_by": userID,
@@ -592,7 +592,7 @@ func seedCurrencies(ctx context.Context, db *mongo.Database) error {
 			"created_at": time.Now(),
 		},
 		{
-			"name":       "Icelandic Króna",
+			"name":       "Icelandic Krona",
 			"short_code": "ISK",
 			"updated_at": time.Now(),
 			"created_by": userID,
@@ -889,7 +889,7 @@ func seedCurrencies(ctx context.Context, db *mongo.Database) error {
 			"created_at": time.Now(),
 		},
 		{
-			"name":       "Nicaraguan Córdoba",
+			"name":       "Nicaraguan Cordoba",
 			"short_code": "NIO",
 			"updated_at": time.Now(),
 			"created_by": userID,
@@ -1252,7 +1252,7 @@ func seedCurrencies(ctx context.Context, db *mongo.Database) error {
 			"created_at": time.Now(),
 		},
 		{
-			"name":       "Venezuelan Bolívar",
+			"name":       "Venezuelan Bolivar",
 			"short_code": "VEF",
 			"updated_at": time.Now(),
 			"created_by": userID,
