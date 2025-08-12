@@ -2,3 +2,5 @@
 tmp
 /uploads
 /logs
+*.exe
+coop-forex-server
