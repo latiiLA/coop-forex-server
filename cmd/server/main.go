@@ -20,7 +20,10 @@ import (
 func setupLogger() {
 	// Create log directory if not exists
 	if _, err := os.Stat("logs"); os.IsNotExist(err) {
-		os.Mkdir("logs", os.ModePerm)
+		err := os.Mkdir("logs", os.ModePerm)
+		if err != nil {
+			log.Fatal("❌ Could not open log file:", err)
+		}
 	}
 
 	// Open log file
@@ -84,7 +87,7 @@ func main() {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:7000", "http://10.1.15.177:7000", "http://10.1.15.177:5050", "http://10.8.100.195:5050"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Content-Disposition"},
 		AllowCredentials: true,
 	}))
 
