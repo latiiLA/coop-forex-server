@@ -113,23 +113,23 @@ type Request struct {
 type RequestDTO struct {
 	ApplicantName          string   `form:"applicant_name" binding:"required"`
 	ApplicantAccountNumber string   `form:"applicant_account_number" binding:"required"`
-	AverageDeposit         string   `form:"average_deposit" binding:"required,gte=0"`
-	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required,gte=0"`
-	CurrentFcyPerformance  string   `form:"current_fcy_performance" binding:"required,gte=0"`
-	TravelPurposeID        string   `form:"travel_purpose_id" binding:"required,len=24"`
-	TravelCountryID        string   `form:"travel_country_id" binding:"required,len=24"`
+	AverageDeposit         string   `form:"average_deposit" binding:"required"`
+	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required"`
+	CurrentFcyPerformance  string   `form:"current_fcy_performance" binding:"required"`
+	TravelPurposeID        string   `form:"travel_purpose_id" binding:"required"`
+	TravelCountryID        string   `form:"travel_country_id" binding:"required"`
 	RequestingAs           string   `form:"requesting_as" binding:"required"`
-	AccountCurrencyID      string   `form:"account_currency_id" binding:"required,len=24"`
-	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,len=24"`
-	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,gt=0"`
-	AccountsToDeduct       []string `form:"accounts_to_deduct[]"`
+	AccountCurrencyID      string   `form:"account_currency_id" binding:"required"`
+	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required"`
+	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required"`
+	AccountsToDeduct       []string `form:"accounts_to_deduct"`
 	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required"`
 	CardAssociatedAccount  string   `form:"card_associated_account"`
 	BranchRecommendation   string   `form:"branch_recommendation" binding:"required"`
 
 	// Attachments (must use `*multipart.FileHeader`)
-	PassportAttachment           *multipart.FileHeader `form:"passport_attachment" binding:"required"`
-	TicketAttachment             *multipart.FileHeader `form:"ticket_attachment" binding:"required"`
+	PassportAttachment           *multipart.FileHeader `form:"passport_attachment"`
+	TicketAttachment             *multipart.FileHeader `form:"ticket_attachment"`
 	VisaAttachment               *multipart.FileHeader `form:"visa_attachment"`
 	BusinessLicenseAttachment    *multipart.FileHeader `form:"business_license_attachment"`
 	EducationLoaAttachment       *multipart.FileHeader `form:"education_loa_attachment"`
@@ -149,7 +149,7 @@ type UpdateRequestDTO struct {
 	AccountCurrencyID      string   `form:"account_currency_id" binding:"required,len=24"`
 	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,len=24"`
 	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,gt=0"`
-	AccountsToDeduct       []string `form:"accounts_to_deduct[]"`
+	AccountsToDeduct       []string `form:"accounts_to_deduct"`
 	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required"`
 	CardAssociatedAccount  string   `form:"card_associated_account"`
 	BranchRecommendation   string   `form:"branch_recommendation" binding:"required"`
