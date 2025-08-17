@@ -83,15 +83,6 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 
 	logEntry.WithField("request", request).Debug("Request payload received")
 
-	form, err := c.MultipartForm()
-	if err != nil {
-		logEntry.WithField("error", err.Error()).Warn("Invalid multipart form data")
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "Invalid multipart form data"})
-		return
-	}
-
-	request.AccountsToDeduct = form.Value["accounts_to_deduct"]
-
 	// Convert string fields to ObjectID
 	travelPurposeObjID, err := primitive.ObjectIDFromHex(request.TravelPurposeID)
 	if err != nil {
