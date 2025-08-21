@@ -54,7 +54,7 @@ func seedTravelPurpose(ctx context.Context, db *mongo.Database) error {
 		return err
 	}
 
-	_, err = db.Collection("travel_purpose").UpdateOne(
+	_, err = db.Collection("travel_purposes").UpdateOne(
 		ctx,
 		bson.M{"_id": travelPurposeID2},
 		bson.M{
@@ -74,7 +74,7 @@ func seedTravelPurpose(ctx context.Context, db *mongo.Database) error {
 		return err
 	}
 
-	_, err = db.Collection("travel_purpose").UpdateOne(
+	_, err = db.Collection("travel_purposes").UpdateOne(
 		ctx,
 		bson.M{"_id": travelPurposeID3},
 		bson.M{
@@ -94,7 +94,7 @@ func seedTravelPurpose(ctx context.Context, db *mongo.Database) error {
 		return err
 	}
 
-	_, err = db.Collection("travel_purpose").UpdateOne(
+	_, err = db.Collection("travel_purposes").UpdateOne(
 		ctx,
 		bson.M{"_id": travelPurposeID4},
 		bson.M{
