@@ -3,6 +3,8 @@ package utils
 import (
 	"errors"
 
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -62,4 +64,28 @@ func GetBranchID(c *gin.Context) (primitive.ObjectID, error) {
 	}
 
 	return branchID, nil
+}
+
+func GetClaimIpAddress(c *gin.Context) (any, error) {
+	val, exists := c.Get("ip")
+	if !exists {
+		return "", errors.New("ip address not found in context")
+	}
+
+	return val, nil
+}
+
+func GetIPAddress(c *gin.Context) (string, error) {
+	// Check X-Forwarded-For header first
+	ip := c.Request.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip = c.ClientIP()
+	}
+
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return "", errors.New("IP not found")
+	}
+
+	return ip, nil
 }
