@@ -17,6 +17,7 @@ type User struct {
 	Username    string              `json:"username" bson:"username"`
 	Password    string              `json:"-" bson:"password"`
 	Status      string              `json:"status" bson:"status"`
+	LastLogin   *time.Time          `json:"last_login,omitempty" bson:"last_login,omitempty"`
 	CreatedAt   time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at" bson:"updated_at"`
 	CreatedBy   primitive.ObjectID  `json:"created_by" bson:"created_by"`
