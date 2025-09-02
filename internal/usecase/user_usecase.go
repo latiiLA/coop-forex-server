@@ -16,7 +16,7 @@ import (
 
 type UserUsecase interface {
 	Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterRequestDTO) error
-	Login(c context.Context, userReq model.LoginRequestDTO) (*model.LoginResponseDTO, error)
+	Login(c context.Context, userReq model.LoginRequestDTO, ip string) (*model.LoginResponseDTO, error)
 	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.User, error)
 	UpdateUserByID(c context.Context, userID primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateUserRequestDTO) (*model.UserResponseDTO, error)
 	GetAllUsers(c context.Context) (*[]model.UserResponseDTO, error)
@@ -117,7 +117,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 	return err
 }
 
-func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (*model.LoginResponseDTO, error) {
+func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, ip string) (*model.LoginResponseDTO, error) {
 	ctx, cancel := context.WithTimeout(c, uc.contextTimeout)
 	defer cancel()
 
@@ -156,12 +156,18 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO) (
 		departmentID = primitive.NilObjectID // fallback
 	}
 
-	accessToken, err := infrastructure.GenerateToken(existingUser.ID, existingUser.Role.Name, branchID, departmentID, effectivePerms)
+	accessToken, err := infrastructure.GenerateToken(existingUser.ID, existingUser.Role.Name, branchID, departmentID, effectivePerms, ip)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Print("user permissions", perms, "role permissions", existingUser.Role.Permissions, "merged permissions", effectivePerms)
+	// // Update last login
+	// var now = time.Now()
+	// existingUser.LastLogin = &now
+
+	// if _, err := uc.userRepository.Update(ctx, existingUser.ID, existingUser); err != nil {
+	// 	return nil, fmt.Errorf("user login failed %s", err)
+	// }
 
 	response := model.LoginResponseDTO{
 		ID:          existingUser.ID,

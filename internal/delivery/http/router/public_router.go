@@ -27,6 +27,8 @@ func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.Route
 	group.POST("/register", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{""}, []string{"user:add"}), userController.Register)
 	group.GET("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{"superadmin"}, []string{"user:views"}), userController.GetAllUsers)
 	group.PUT("/users/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{"admin"}, []string{"user:update"}), userController.UpdateUser)
+	group.GET("/ip", middleware.JwtAuthMiddleware(configs.JwtSecret), userController.IP)
+
 	// group.PATCH("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.DeleteUser)
 
 	// LDAP configuration

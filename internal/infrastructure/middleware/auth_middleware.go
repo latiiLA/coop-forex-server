@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
+	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 )
 
 func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
@@ -19,7 +21,13 @@ func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
-		claims, err := infrastructure.ValidateToken(token)
+		clientIP, err := utils.GetIPAddress(c)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		claims, err := infrastructure.ValidateToken(token, clientIP)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "Invalid token"})
 			return
@@ -29,6 +37,7 @@ func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
 		c.Set("role", claims["role"])
 		c.Set("branchID", claims["branchID"])
 		c.Set("departmentID", claims["departmentID"])
+		c.Set("ip", claims["ip"])
 		c.Set("permissions", claims["permissions"])
 		c.Next()
 	}
@@ -36,10 +45,32 @@ func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
 
 func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println("inside auth role and permission")
+		logEntry := utils.GetLogger(c)
+		logEntry.Info("inside auth role and permission")
 		roleValue, exists := c.Get("role")
 		if !exists {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "Role not found"})
+			return
+		}
+
+		// security measures by adding ip to the token
+		clientIP, err := utils.GetIPAddress(c)
+		if err != nil {
+			logEntry.WithField("error", err.Error()).Warn("invalid ip address")
+			c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "cannot determine client IP"})
+			return
+		}
+
+		tokenClaimIP, err := utils.GetClaimIpAddress(c)
+		if err != nil {
+			logEntry.WithField("error", err.Error()).Warn("invalid token ip address", tokenClaimIP)
+			c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "cannot determine token IP"})
+			return
+		}
+
+		if tokenClaimIP != clientIP {
+			logEntry.Warn("trying from different ip")
+			c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "your network has been changed. please relogin"})
 			return
 		}
 
@@ -81,6 +112,7 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 			}
 		}
 
+		logEntry.Warn("message: Access Denied")
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "Access denied"})
 	}
 }
