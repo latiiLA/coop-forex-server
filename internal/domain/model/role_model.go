@@ -31,7 +31,7 @@ type RoleRepository interface {
 	Create(ctx context.Context, role *Role) error
 	FindByID(ctx context.Context, role_id primitive.ObjectID) (*Role, error)
 	FindAll(ctx context.Context) ([]Role, error)
-	ExistsRoleByName(ctx context.Context, name string) (bool, error)
+	FindRoleByName(ctx context.Context, name string) (*Role, error)
 	Update(ctx context.Context, role_id primitive.ObjectID, role *Role) error
 	Delete(ctx context.Context, role_id primitive.ObjectID, role *Role) error
 	FindDeleted(ctx context.Context) ([]Role, error)

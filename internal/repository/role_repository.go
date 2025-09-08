@@ -189,7 +189,7 @@ func (rr *roleRepository) FindDeleted(ctx context.Context) ([]model.Role, error)
 	return roles, nil
 }
 
-func (rr *roleRepository) ExistsRoleByName(ctx context.Context, name string) (bool, error) {
+func (rr *roleRepository) FindRoleByName(ctx context.Context, name string) (*model.Role, error) {
 	filter := bson.M{"name": name, "is_deleted": false}
 
 	var result model.Role
@@ -197,13 +197,13 @@ func (rr *roleRepository) ExistsRoleByName(ctx context.Context, name string) (bo
 	err := rr.collection.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return false, nil
+			return nil, nil
 		}
 		// some other error occurred
-		return false, err
+		return nil, err
 	}
 
-	return true, nil
+	return &result, nil
 }
 
 func (rr *roleRepository) Update(ctx context.Context, role_id primitive.ObjectID, role *model.Role) error {
