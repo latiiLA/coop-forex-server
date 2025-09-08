@@ -56,11 +56,11 @@ func seedRoles(ctx context.Context, db *mongo.Database) error {
 	roles := []bson.M{
 		{
 			"_id":         roleID,
-			"name":        "superadmin",
+			"name":        "SUPERADMIN",
 			"created_at":  now,
 			"updated_at":  now,
 			"created_by":  creatorUser,
-			"permissions": []string{"role:add", "role:view", "role:update", "role:view-deleted", "user:view", "user:add", "user:add-permission", "travel_purpose:add", "travel_purpose:view", "subprocess:add", "subprocess:view", "process:add", "process:view", "currency:add", "currency:view", "department:add", "department:view", "country:add", "country:view"},
+			"permissions": []string{"role:add", "role:view", "role:update", "role:view-deleted", "user:view", "user:add", "user:add-permission", "user:update", "travel_purpose:add", "travel_purpose:view", "subprocess:add", "subprocess:view", "process:add", "process:view", "currency:add", "currency:view", "department:add", "department:view", "country:add", "country:view"},
 			"updated_by":  nil,
 			"deleted_by":  nil,
 			"deleted_at":  nil,
@@ -68,7 +68,7 @@ func seedRoles(ctx context.Context, db *mongo.Database) error {
 		},
 		{
 			"_id":         roleID2,
-			"name":        "forex_approver",
+			"name":        "FOREX_APPROVER",
 			"created_at":  now,
 			"updated_at":  now,
 			"created_by":  creatorUser,
@@ -80,7 +80,7 @@ func seedRoles(ctx context.Context, db *mongo.Database) error {
 		},
 		{
 			"_id":         roleID3,
-			"name":        "forex_user",
+			"name":        "FOREX_USER",
 			"created_at":  now,
 			"updated_at":  now,
 			"created_by":  creatorUser,
@@ -92,7 +92,7 @@ func seedRoles(ctx context.Context, db *mongo.Database) error {
 		},
 		{
 			"_id":         roleID4,
-			"name":        "authorizer",
+			"name":        "AUTHORIZER",
 			"created_at":  now,
 			"updated_at":  now,
 			"created_by":  creatorUser,
@@ -104,7 +104,7 @@ func seedRoles(ctx context.Context, db *mongo.Database) error {
 		},
 		{
 			"_id":         roleID5,
-			"name":        "user",
+			"name":        "USER",
 			"created_at":  now,
 			"updated_at":  now,
 			"created_by":  creatorUser,
@@ -116,7 +116,7 @@ func seedRoles(ctx context.Context, db *mongo.Database) error {
 		},
 		{
 			"_id":         roleID6,
-			"name":        "processor_user",
+			"name":        "PROCESSOR_USER",
 			"created_at":  now,
 			"updated_at":  now,
 			"created_by":  creatorUser,
@@ -128,7 +128,7 @@ func seedRoles(ctx context.Context, db *mongo.Database) error {
 		},
 		{
 			"_id":         roleID7,
-			"name":        "processor_authorizer",
+			"name":        "PROCESSOR_AUTHORIZER",
 			"created_at":  now,
 			"updated_at":  now,
 			"created_by":  creatorUser,
