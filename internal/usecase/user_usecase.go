@@ -10,6 +10,7 @@ import (
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -212,8 +213,11 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 			return err
 		}
 
-		existingProfile, err := uc.profileRepository.FindByID(sessCtx, existingUser.ProfileID)
+		logrus.Println(existingUser.Profile.ID, user.Username, "existing user")
+
+		existingProfile, err := uc.profileRepository.FindByID(sessCtx, existingUser.Profile.ID)
 		if err != nil {
+			logrus.Println(err)
 			return err
 		}
 
@@ -271,7 +275,7 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 		existingUser.UpdatedAt = time.Now()
 
 		// Database update for both profile and user
-		updateProfile, err := uc.profileRepository.Update(sessCtx, existingUser.ProfileID, existingProfile)
+		updateProfile, err := uc.profileRepository.Update(sessCtx, existingUser.Profile.ID, existingProfile)
 		if err != nil {
 			session.AbortTransaction(sessCtx)
 			return err
