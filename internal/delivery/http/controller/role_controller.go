@@ -97,12 +97,7 @@ func (rc *roleController) UpdateRole(c *gin.Context) {
 		return
 	}
 
-	role := &model.Role{
-		Name:        roleUpdate.Name,
-		Permissions: roleUpdate.Permissions,
-	}
-
-	err = rc.roleUsecase.UpdateRole(c, authUserID, roleID, role)
+	err = rc.roleUsecase.UpdateRole(c, authUserID, roleID, roleUpdate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
