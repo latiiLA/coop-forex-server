@@ -27,7 +27,7 @@ func (pr *profileRepository) Create(ctx context.Context, profile *model.Profile)
 }
 
 func (pr *profileRepository) FindByID(ctx context.Context, profile_id primitive.ObjectID) (*model.Profile, error) {
-	filter := bson.M{"_id": profile_id, "is_deleted": false}
+	filter := bson.M{"_id": profile_id}
 	var profile model.Profile
 
 	err := pr.collection.FindOne(ctx, filter).Decode(&profile)
@@ -42,7 +42,7 @@ func (pr *profileRepository) FindByID(ctx context.Context, profile_id primitive.
 }
 
 func (pr *profileRepository) FindByEmail(ctx context.Context, email string) (*model.Profile, error) {
-	filter := bson.M{"email": email, "is_deleted": false}
+	filter := bson.M{"email": email}
 	var profile model.Profile
 
 	err := pr.collection.FindOne(ctx, filter).Decode(&profile)
@@ -53,7 +53,7 @@ func (pr *profileRepository) FindByEmail(ctx context.Context, email string) (*mo
 }
 
 func (pr *profileRepository) Update(ctx context.Context, profile_id primitive.ObjectID, profile *model.Profile) (*model.Profile, error) {
-	filter := bson.M{"_id": profile_id, "is_deleted": false}
+	filter := bson.M{"_id": profile_id}
 
 	result, err := pr.collection.UpdateOne(ctx, filter, bson.M{"$set": profile})
 
@@ -65,9 +65,9 @@ func (pr *profileRepository) Update(ctx context.Context, profile_id primitive.Ob
 		return nil, fmt.Errorf("profile not found")
 	}
 
-	if result.ModifiedCount == 0 {
-		return nil, fmt.Errorf("no changes were made")
-	}
+	// if result.ModifiedCount == 0 {
+	// 	return nil, fmt.Errorf("no changes were made")
+	// }
 
 	return pr.FindByID(ctx, profile_id)
 }
