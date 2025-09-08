@@ -972,7 +972,7 @@ func (rc *requestController) RejectRequest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request authorized successfully"})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request rejected successfully"})
 }
 
 func (rc *requestController) DeleteRequest(c *gin.Context) {
@@ -1032,7 +1032,7 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request deleted successfully"})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request accepted successfully"})
 }
 
 func (rc *requestController) SendRequest(c *gin.Context) {
@@ -1093,7 +1093,7 @@ func (rc *requestController) DeclineOrgRequest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request sent successfully"})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request declined successfully"})
 }
 
 func (rc *requestController) GetValidatedRequests(c *gin.Context) {
