@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
@@ -14,7 +15,7 @@ type RoleUsecase interface {
 	AddRole(ctx context.Context, authUserID primitive.ObjectID, role *model.Role) error
 	GetRoleByID(ctx context.Context, roleID primitive.ObjectID) (*model.Role, error)
 	GetAllRoles(ctx context.Context) ([]model.Role, error)
-	UpdateRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID, role *model.Role) error
+	UpdateRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID, role model.UpdateRoleDTO) error
 	DeleteRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID) error
 	GetDeletedRoles(ctx context.Context) ([]model.Role, error)
 }
@@ -35,15 +36,15 @@ func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectI
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	if role.Name == "superadmin" {
+	if role.Name == "SUPERADMIN" {
 		return errors.New("role not allowed")
 	}
 
-	exists, err := ru.roleRepository.ExistsRoleByName(ctx, role.Name)
+	existingRoleName, err := ru.roleRepository.FindRoleByName(ctx, strings.ToUpper(role.Name))
 	if err != nil {
 		return err
 	}
-	if exists {
+	if existingRoleName != nil {
 		return errors.New("role already exists")
 	}
 
@@ -68,7 +69,7 @@ func (ru *roleUsecase) GetAllRoles(ctx context.Context) ([]model.Role, error) {
 	return ru.roleRepository.FindAll(ctx)
 }
 
-func (ru *roleUsecase) UpdateRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID, roleUpdated *model.Role) error {
+func (ru *roleUsecase) UpdateRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID, roleUpdated model.UpdateRoleDTO) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
@@ -77,9 +78,30 @@ func (ru *roleUsecase) UpdateRole(ctx context.Context, authUserID primitive.Obje
 		return fmt.Errorf("failed to find role by ID: %w", err)
 	}
 
+	if role == nil {
+		return errors.New("role not found")
+	}
+
+	if roleUpdated.Name != "" {
+		existingRoleName, err := ru.roleRepository.FindRoleByName(ctx, strings.ToUpper(roleUpdated.Name))
+		if err != nil {
+			return nil
+		}
+		if existingRoleName != nil && role.Name != existingRoleName.Name {
+			return errors.New("role with this name already exists")
+		}
+
+		role.Name = strings.ToUpper(roleUpdated.Name)
+	}
+
 	now := time.Now().UTC()
-	role.Name = roleUpdated.Name
-	role.Permissions = roleUpdated.Permissions
+	if role.Permissions != nil {
+		role.Permissions = roleUpdated.Permissions
+	}
+	if role.Name != "" {
+		role.Name = roleUpdated.Name
+	}
+
 	role.UpdatedAt = now
 	role.UpdatedBy = &authUserID
 
