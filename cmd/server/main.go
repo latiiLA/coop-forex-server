@@ -100,7 +100,7 @@ func main() {
 
 	router.RouterSetup(timeout, db, r)
 
-	if err := r.Run(":8080"); err != nil {
+	if err := r.RunTLS(":8080", configs.CertFile, configs.KeyFile); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
