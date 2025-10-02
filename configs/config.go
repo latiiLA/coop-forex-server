@@ -30,12 +30,16 @@ var (
 	LDAPBaseDN       string
 	LDAPBindUser     string
 	LDAPBindPassword string
+
+	// ssl
+	CertFile string
+	KeyFile  string
 )
 
 func LoadConfig() {
-	err := godotenv.Load(".env")
+	err := godotenv.Load()
 	if err != nil {
-		log.Println("No .env file found or couldn't load it, relying on environment variables")
+		log.Println("No .env file found or couldn't load it, relying on environment variables", err)
 	}
 
 	MongoURL = os.Getenv("MONGO_URL")
@@ -108,6 +112,17 @@ func LoadConfig() {
 	MailSender = os.Getenv("MAIL_SENDER")
 	if MailSender == "" {
 		log.Fatal("MAIL_SENDER is required but not set")
+	}
+
+	// ssl
+	CertFile = os.Getenv("CERT_FILE")
+	if CertFile == "" {
+		log.Fatal("CERT_FILE is required but not set")
+	}
+
+	KeyFile = os.Getenv("KEY_FILE")
+	if KeyFile == "" {
+		log.Fatal("KEY_FILE is required but not set")
 	}
 
 	// LDAP env
