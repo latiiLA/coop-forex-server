@@ -1,0 +1,8 @@
+[
+  {
+    "delete": "profiles",
+    "deletes": [ 
+      { "q": { "_id": { "$oid": "66a7b8c9e4b0f12345689000" } }, "limit": 1 }
+    ]
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "insert": "profiles",
+    "documents": [
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345689000" },
+        "email": "superadmin@latii.com",
+        "first_name": "Super",
+        "middle_name": "Admin",
+        "last_name": "User",
+        "department_id": null,
+        "branch_id": null,
+        "birthday": null,
+        "gender": null,
+        "phone": null,
+        "short_bio": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null
+      }
+    ]
+  }
+]
