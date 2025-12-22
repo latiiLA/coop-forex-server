@@ -3,6 +3,7 @@ package configs
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -34,6 +35,8 @@ var (
 	// ssl
 	CertFile string
 	KeyFile  string
+
+	AllowedOrigins []string
 )
 
 func LoadConfig() {
@@ -150,5 +153,11 @@ func LoadConfig() {
 	LDAPBindPassword = os.Getenv("LDAP_BIND_PASSWORD")
 	if LDAPBindPassword == "" {
 		log.Fatalf("LDAP bind password is required but not set")
+	}
+
+	// Read allowed origins from environment and split into slice
+	originsEnv := os.Getenv("ALLOWED_ORIGINS")
+	if originsEnv != "" {
+		AllowedOrigins = strings.Split(originsEnv, ",")
 	}
 }

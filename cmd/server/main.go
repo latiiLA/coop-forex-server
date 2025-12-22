@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -83,13 +84,22 @@ func main() {
 
 	// Start the routes
 	r := gin.Default()
+
 	// Cors policy
+	allowed := configs.AllowedOrigins
+	if len(allowed) == 0 {
+		logrus.Warn("AllowedOrigins is empty. Falling back to '*'")
+		allowed = []string{"*"}
+	}
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:7000", "http://10.1.15.177:7000", "http://10.1.15.177:5050", "https://10.8.100.195:5050"},
+		AllowOrigins:     allowed,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Content-Disposition"},
 		AllowCredentials: true,
 	}))
+	// Only trust localhost
+	r.SetTrustedProxies(configs.AllowedOrigins)
 
 	// add logger middleware
 	r.Use(middleware.RequestLogger())
@@ -98,7 +108,10 @@ func main() {
 
 	r.Static("/uploads", "./uploads") // allow upload access
 
-	router.RouterSetup(timeout, db, r)
+	// create an API group
+	api := r.Group("/api")
+
+	router.RouterSetup(api, timeout, db)
 
 	if err := r.RunTLS(":8080", configs.CertFile, configs.KeyFile); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
