@@ -1,0 +1,29 @@
+[
+  {
+    "insert": "users",
+    "documents": [
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345679000" },
+
+        "username": "superadmin",
+
+        "role_id": { "$oid": "66a7b8c9e4b0f12345678000" },
+        "profile_id": { "$oid": "66a7b8c9e4b0f12345689000" },
+        "permissions": [],
+        "password": "$2a$14$Losw5N2WTYnqYa99B69.2eRxWL2nPF3f2gepXnCNkKGAzYGv/aG5G",
+        "status": "active",
+        "last_login": { "$date": { "$numberLong": "1757030400000" } },
+
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+
+        "is_deleted": false
+      }
+    ]
+  }
+]
