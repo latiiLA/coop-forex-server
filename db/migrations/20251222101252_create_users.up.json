@@ -31,7 +31,7 @@
   {
     "createIndexes": "users",
     "indexes": [
-      { "key": { "name": 1 }, "name": "uniq_role_username", "unique": true }
+      { "key": { "username": 1 }, "name": "uniq_role_username", "unique": true }
     ]
   }
 ]
