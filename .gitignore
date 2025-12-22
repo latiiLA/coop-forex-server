@@ -4,4 +4,8 @@ tmp
 /logs
 *.exe
 coop-forex-server
-/ssl
+
+# SSL certificates
+ssl/*.key
+ssl/*.pem
+ssl/*.crt
