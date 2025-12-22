@@ -1,0 +1,11 @@
+[
+  {
+    "delete": "travel_purposes",
+    "deletes": [ 
+      { "q": { "_id": { "$oid": "66a7b8c9e4b0f12345678020" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "66a7b8c9e4b0f12345678021" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "66a7b8c9e4b0f12345678022" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "66a7b8c9e4b0f12345678023" } }, "limit": 1 }
+    ]
+  }
+]
