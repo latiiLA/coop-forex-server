@@ -1,0 +1,11 @@
+[
+  {
+    "delete": "departments",
+    "deletes": [
+      {
+        "q": { "_id": { "$oid": "676e44274d7cd2c7251d66d2" } },
+        "limit": 1
+      }
+    ]
+  }
+]
