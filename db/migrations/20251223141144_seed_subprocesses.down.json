@@ -1,0 +1,8 @@
+[
+  {
+    "delete": "subprocesses",
+    "deletes": [
+      { "q": { "_id": { "$oid": "676e48894d7cd2c7251e69f4" } }, "limit": 1 }
+    ]
+  }
+]

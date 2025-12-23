@@ -1,0 +1,19 @@
+[
+  {
+    "insert": "subprocesses",
+    "documents": [
+      {
+        "_id": { "$oid": "676e48894d7cd2c7251e69f4" },
+        "name": "Trade and Service Banking",
+        "process_id": { "$oid": "676e44274d7cd2c7251d99e8" },
+        "created_at": { "$date": { "$numberLong": "1734912000000" } },
+        "updated_at": { "$date": { "$numberLong": "1734912000000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      }
+    ]
+  }
+]
