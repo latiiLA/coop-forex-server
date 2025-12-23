@@ -74,14 +74,6 @@ func main() {
 	db := client.Database("coop_forex_db")
 	timeout := configs.Timeout
 
-	// Run migrations
-	if configs.DisableMigration != "true" {
-		if err := RunMigrations(); err != nil {
-			log.Fatalf("❌ Migration failed: %v", err)
-		}
-		log.Info("✅ Database migration completed.")
-	}
-
 	// Start the routes
 	r := gin.Default()
 
