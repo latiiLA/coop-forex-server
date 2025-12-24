@@ -4,7 +4,7 @@
     "validator": {
       "$jsonSchema": {
         "bsonType": "object",
-        "required": ["role_id", "permissions", "profile_id", "username", "password", "status", "last_login", "created_by", "updated_by", "deleted_by", "deleted_at", "created_at", "updated_at", "is_deleted"],
+        "required": ["role_id", "permissions", "profile_id", "branch_id", "department_id", "username", "password", "status", "last_login", "created_by", "updated_by", "deleted_by", "deleted_at", "created_at", "updated_at", "is_deleted"],
         "properties": {
           "name": { "bsonType": "string" },
           "role_id": { "bsonType": "objectId" },
@@ -12,7 +12,9 @@
             "bsonType": "array", 
             "items": { "bsonType": "string" }
             },
-          "profile_id": { "bsonType": "objectId" },
+          "profile_id": { "bsonType": ["objectId", "null"] },
+          "branch_id": { "bsonType": ["objectId", "null"] },
+          "department_id": { "bsonType": "objectId" },
           "username": { "bsonType": "string" },
           "password": { "bsonType": "string" },
           "status": { "bsonType": "string" },
