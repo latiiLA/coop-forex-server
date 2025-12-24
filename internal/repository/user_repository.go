@@ -436,6 +436,8 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 				{Key: "is_deleted", Value: false},
 			}},
 		},
+
+		// Profile
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "profiles"},
@@ -450,6 +452,7 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
 		},
+
 		// Role
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
@@ -465,18 +468,19 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
 		},
+
 		// Department
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "departments"},
 				{Key: "localField", Value: "profile.department_id"},
 				{Key: "foreignField", Value: "_id"},
-				{Key: "as", Value: "department"},
+				{Key: "as", Value: "profile.department"},
 			}},
 		},
 		bson.D{
 			{Key: "$unwind", Value: bson.D{
-				{Key: "path", Value: "$department"},
+				{Key: "path", Value: "$profile.department"},
 				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
 		},
@@ -485,57 +489,33 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "subprocesses"},
-				{Key: "let", Value: bson.D{
-					{Key: "subprocessId", Value: "$department.subprocess_id"},
-				}},
-				{Key: "pipeline", Value: bson.A{
-					bson.D{{Key: "$match", Value: bson.D{
-						{Key: "$expr", Value: bson.D{
-							{Key: "$eq", Value: bson.A{"$_id", "$$subprocessId"}},
-						}},
-					}}},
-				}},
-				{Key: "as", Value: "subprocessObj"},
+				{Key: "localField", Value: "profile.department.subprocess_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "profile.department.subprocess"},
 			}},
 		},
-
-		// Embed subprocess inside department.subprocess
-		bson.D{{Key: "$set", Value: bson.D{
-			{Key: "department.subprocess", Value: bson.D{
-				{Key: "$arrayElemAt", Value: bson.A{"$subprocessObj", 0}},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$profile.department.subprocess"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
-		}}},
-
-		// Remove top-level subprocessObj
-		bson.D{{Key: "$unset", Value: "subprocessObj"}},
+		},
 
 		// Lookup the process with top-level as "process"
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "processes"},
-				{Key: "let", Value: bson.D{
-					{Key: "processId", Value: "$department.subprocess.process_id"},
-				}},
-				{Key: "pipeline", Value: bson.A{
-					bson.D{{Key: "$match", Value: bson.D{
-						{Key: "$expr", Value: bson.D{
-							{Key: "$eq", Value: bson.A{"$_id", "$$processId"}},
-						}},
-					}}},
-				}},
-				{Key: "as", Value: "processObj"},
+				{Key: "localField", Value: "profile.department.subprocess.process_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "profile.department.subprocess.process"},
 			}},
 		},
-
-		// Embed process inside subprocess.process
-		bson.D{{Key: "$set", Value: bson.D{
-			{Key: "department.subprocess.process", Value: bson.D{
-				{Key: "$arrayElemAt", Value: bson.A{"$processObj", 0}},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$profile.department.subprocess.process"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
-		}}},
-
-		// Remove top-level processObj
-		bson.D{{Key: "$unset", Value: "processObj"}},
+		},
 
 		// Branch
 		bson.D{
@@ -543,12 +523,12 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 				{Key: "from", Value: "branches"},
 				{Key: "localField", Value: "profile.branch_id"},
 				{Key: "foreignField", Value: "_id"},
-				{Key: "as", Value: "branch"},
+				{Key: "as", Value: "profile.branch"},
 			}},
 		},
 		bson.D{
 			{Key: "$unwind", Value: bson.D{
-				{Key: "path", Value: "$branch"},
+				{Key: "path", Value: "$profile.branch"},
 				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
 		},
@@ -557,29 +537,17 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "districts"},
-				{Key: "let", Value: bson.D{
-					{Key: "districtId", Value: "$branch.district_id"},
-				}},
-				{Key: "pipeline", Value: bson.A{
-					bson.D{{Key: "$match", Value: bson.D{
-						{Key: "$expr", Value: bson.D{
-							{Key: "$eq", Value: bson.A{"$_id", "$$districtId"}},
-						}},
-					}}},
-				}},
-				{Key: "as", Value: "districtObj"},
+				{Key: "localField", Value: "profile.branch.district_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "profile.branch.district"},
 			}},
 		},
-
-		// Embed district inside branch.district
-		bson.D{{Key: "$set", Value: bson.D{
-			{Key: "branch.district", Value: bson.D{
-				{Key: "$arrayElemAt", Value: bson.A{"$districtObj", 0}},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$profile.branch.district"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
-		}}},
-
-		// Remove top-level districtObj
-		bson.D{{Key: "$unset", Value: "districtObj"}},
+		},
 
 		// User - Creator
 		bson.D{
@@ -601,29 +569,17 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "profiles"},
-				{Key: "let", Value: bson.D{
-					{Key: "profile_id", Value: "$creator.profile_id"},
-				}},
-				{Key: "pipeline", Value: bson.A{
-					bson.D{{Key: "$match", Value: bson.D{
-						{Key: "$expr", Value: bson.D{
-							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
-						}},
-					}}},
-				}},
-				{Key: "as", Value: "profileObj"},
+				{Key: "localField", Value: "creator.profile_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "creator.profile"},
 			}},
 		},
-
-		// Embed profile inside creator.profile
-		bson.D{{Key: "$set", Value: bson.D{
-			{Key: "creator.profile", Value: bson.D{
-				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$creator.profile"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
-		}}},
-
-		// Remove top-level profileObj
-		bson.D{{Key: "$unset", Value: "profileObj"}},
+		},
 
 		// User - Updater
 		bson.D{
@@ -645,29 +601,22 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 		bson.D{
 			{Key: "$lookup", Value: bson.D{
 				{Key: "from", Value: "profiles"},
-				{Key: "let", Value: bson.D{
-					{Key: "profile_id", Value: "$updater.profile_id"},
-				}},
-				{Key: "pipeline", Value: bson.A{
-					bson.D{{Key: "$match", Value: bson.D{
-						{Key: "$expr", Value: bson.D{
-							{Key: "$eq", Value: bson.A{"$_id", "$$profile_id"}},
-						}},
-					}}},
-				}},
-				{Key: "as", Value: "profileObj"},
+				{Key: "localField", Value: "updater.profile_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "updater.profile"},
+			}},
+		},
+		bson.D{
+			{Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$updater.profile"},
+				{Key: "preserveNullAndEmptyArrays", Value: true},
 			}},
 		},
 
-		// Embed profile inside updater.profile
-		bson.D{{Key: "$set", Value: bson.D{
-			{Key: "updater.profile", Value: bson.D{
-				{Key: "$arrayElemAt", Value: bson.A{"$profileObj", 0}},
-			}},
+		// sort
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "created_at", Value: -1},
 		}}},
-
-		// Remove top-level profileObj
-		bson.D{{Key: "$unset", Value: "profileObj"}},
 
 		bson.D{
 			{Key: "$project", Value: bson.D{
@@ -677,11 +626,7 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 				{Key: "profile", Value: 1},
 				{Key: "username", Value: 1},
 				{Key: "status", Value: 1},
-				{Key: "department", Value: 1},
-				{Key: "branch", Value: 1},
 				{Key: "created_at", Value: 1},
-				{Key: "creator", Value: 1},
-				{Key: "updater", Value: 1},
 				{Key: "updated_at", Value: 1},
 				{Key: "created_by", Value: 1},
 				{Key: "updated_by", Value: 1},
@@ -691,6 +636,27 @@ func (ur *userRepository) FindAll(ctx context.Context) (*[]model.UserResponseDTO
 				{Key: "debug_subprocess", Value: 1},
 				{Key: "debug_process_id", Value: 1},
 				{Key: "debug_processObj", Value: 1},
+
+				{Key: "branch", Value: bson.D{{Key: "$cond", Value: bson.A{
+					bson.D{{Key: "$ifNull", Value: bson.A{"$branch._id", false}}},
+					"$branch",
+					"$$REMOVE",
+				}}}},
+				{Key: "department", Value: bson.D{{Key: "$cond", Value: bson.A{
+					bson.D{{Key: "$ifNull", Value: bson.A{"$department._id", false}}},
+					"$department",
+					"$$REMOVE",
+				}}}},
+				{Key: "creator", Value: bson.D{{Key: "$cond", Value: bson.A{
+					bson.D{{Key: "$ifNull", Value: bson.A{"$creator._id", false}}},
+					"$creator",
+					"$$REMOVE",
+				}}}},
+				{Key: "updater", Value: bson.D{{Key: "$cond", Value: bson.A{
+					bson.D{{Key: "$ifNull", Value: bson.A{"$updater._id", false}}},
+					"$updater",
+					"$$REMOVE",
+				}}}},
 			}},
 		},
 	}
