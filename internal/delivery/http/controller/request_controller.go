@@ -477,12 +477,22 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 		RequestingAs:           request.RequestingAs,
 		AccountCurrencyID:      accountCurrencyObjID,
 		FcyRequestedID:         fcyRequestedObjID,
+	}
 
-		PassportAttachment:           *passportID,
-		TicketAttachment:             *ticketID,
-		BusinessLicenseAttachment:    businessLicenseID,
-		EducationLoaAttachment:       educationID,
-		BusinessSupportingAttachment: supportingLetterID,
+	if passportID != nil {
+		fcyRequest.PassportAttachment = *passportID
+	}
+	if ticketID != nil {
+		fcyRequest.TicketAttachment = *ticketID
+	}
+	if educationID != nil {
+		fcyRequest.EducationLoaAttachment = educationID
+	}
+	if businessLicenseID != nil {
+		fcyRequest.BusinessLicenseAttachment = businessLicenseID
+	}
+	if supportingLetterID != nil {
+		fcyRequest.BusinessSupportingAttachment = supportingLetterID
 	}
 
 	err = rc.requestUsecase.UpdateRequest(c, userID, requestID, &fcyRequest)
