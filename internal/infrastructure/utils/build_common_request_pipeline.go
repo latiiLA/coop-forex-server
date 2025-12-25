@@ -28,6 +28,30 @@ func BuildCommonRequestPipelineStages() mongo.Pipeline {
 		}},
 	})
 
+	pipeline = append(pipeline, LookupUserWithProfile("created_by", "creator")...)
+	pipeline = append(pipeline, LookupUserWithProfile("requested_by", "requester")...)
+	pipeline = append(pipeline, LookupUserWithProfile("authorized_by", "authorizer")...)
+	pipeline = append(pipeline, LookupUserWithProfile("validated_by", "validater")...)
+	pipeline = append(pipeline, LookupUserWithProfile("approved_by", "approver")...)
+	pipeline = append(pipeline, LookupUserWithProfile("accepted_by", "accepter")...)
+	pipeline = append(pipeline, LookupUserWithProfile("declined_by", "decliner")...)
+
+	pipeline = append(pipeline, LookupAndUnwind("departments", "department_id", "department")...)
+	pipeline = append(pipeline, LookupAndUnwind("branches", "branch_id", "branch")...)
+	pipeline = append(pipeline, LookupAndUnwind("countries", "travel_country_id", "travel_country")...)
+	pipeline = append(pipeline, LookupAndUnwind("travel_purposes", "travel_purpose_id", "travel_purpose")...)
+	pipeline = append(pipeline, LookupAndUnwind("currencies", "account_currency_id", "account_currency")...)
+	pipeline = append(pipeline, LookupAndUnwind("currencies", "fcy_requested_id", "fcy_requested")...)
+	pipeline = append(pipeline, LookupAndUnwind("currencies", "validated_account_currency_id", "validated_account_currency")...)
+
+	pipeline = append(pipeline, LookupAndUnwind("files", "passport_attachment", "passport")...)
+	pipeline = append(pipeline, LookupAndUnwind("files", "ticket_attachment", "ticket")...)
+	pipeline = append(pipeline, LookupAndUnwind("files", "visa_attachment", "visa")...)
+	pipeline = append(pipeline, LookupAndUnwind("files", "education_loa_attachment", "education_loa")...)
+	pipeline = append(pipeline, LookupAndUnwind("files", "business_letter_attachment", "business_letter")...)
+	pipeline = append(pipeline, LookupAndUnwind("files", "business_supporting_attachment", "business_supporting")...)
+	pipeline = append(pipeline, LookupAndUnwind("files", "health_letter_attachment", "health_letter")...)
+
 	pipeline = append(pipeline, bson.D{
 		{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
@@ -78,6 +102,7 @@ func BuildCommonRequestPipelineStages() mongo.Pipeline {
 			{Key: "updated_at", Value: 1},
 			{Key: "requested_at", Value: 1},
 			{Key: "validated_at", Value: 1},
+
 			{Key: "created_by", Value: 1},
 			{Key: "updated_by", Value: 1},
 			{Key: "requested_by", Value: 1},
@@ -85,14 +110,52 @@ func BuildCommonRequestPipelineStages() mongo.Pipeline {
 			{Key: "validated_by", Value: 1},
 			{Key: "accepted_by", Value: 1},
 			{Key: "declined_by", Value: 1},
-			{Key: "creater", Value: 1},
-			{Key: "requester", Value: 1},
-			{Key: "authorizer", Value: 1},
-			{Key: "validater", Value: 1},
-			{Key: "approver", Value: 1},
-			{Key: "rejecter", Value: 1},
-			{Key: "accepter", Value: 1},
-			{Key: "decliner", Value: 1},
+
+			{Key: "creator", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$creator._id", false}}},
+				"$creator",
+				"$$REMOVE",
+			}}}},
+			{Key: "updater", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$updater._id", false}}},
+				"$updater",
+				"$$REMOVE",
+			}}}},
+			{Key: "requester", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$requester._id", false}}},
+				"$requester",
+				"$$REMOVE",
+			}}}},
+			{Key: "authorizer", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$authorizer._id", false}}},
+				"$authorizer",
+				"$$REMOVE",
+			}}}},
+			{Key: "validater", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$validater._id", false}}},
+				"$validater",
+				"$$REMOVE",
+			}}}},
+			{Key: "approver", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$approver._id", false}}},
+				"$approver",
+				"$$REMOVE",
+			}}}},
+			{Key: "rejecter", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$rejecter._id", false}}},
+				"$rejecter",
+				"$$REMOVE",
+			}}}},
+			{Key: "accepter", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$accepter._id", false}}},
+				"$accepter",
+				"$$REMOVE",
+			}}}},
+			{Key: "decliner", Value: bson.D{{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$ifNull", Value: bson.A{"$decliner._id", false}}},
+				"$decliner",
+				"$$REMOVE",
+			}}}},
 
 			{Key: "approved_currency_ids", Value: 1},
 			{Key: "approved_currencies", Value: 1},
@@ -108,30 +171,6 @@ func BuildCommonRequestPipelineStages() mongo.Pipeline {
 			{Key: "is_deleted", Value: 1},
 		}},
 	})
-
-	pipeline = append(pipeline, LookupUserWithProfile("created_by", "creater")...)
-	pipeline = append(pipeline, LookupUserWithProfile("requested_by", "requester")...)
-	pipeline = append(pipeline, LookupUserWithProfile("authorized_by", "authorizer")...)
-	pipeline = append(pipeline, LookupUserWithProfile("validated_by", "validater")...)
-	pipeline = append(pipeline, LookupUserWithProfile("approved_by", "approver")...)
-	pipeline = append(pipeline, LookupUserWithProfile("accepted_by", "accepter")...)
-	pipeline = append(pipeline, LookupUserWithProfile("declined_by", "decliner")...)
-
-	pipeline = append(pipeline, LookupAndUnwind("departments", "department_id", "department")...)
-	pipeline = append(pipeline, LookupAndUnwind("branches", "branch_id", "branch")...)
-	pipeline = append(pipeline, LookupAndUnwind("countries", "travel_country_id", "travel_country")...)
-	pipeline = append(pipeline, LookupAndUnwind("travel_purposes", "travel_purpose_id", "travel_purpose")...)
-	pipeline = append(pipeline, LookupAndUnwind("currencies", "account_currency_id", "account_currency")...)
-	pipeline = append(pipeline, LookupAndUnwind("currencies", "fcy_requested_id", "fcy_requested")...)
-	pipeline = append(pipeline, LookupAndUnwind("currencies", "validated_account_currency_id", "validated_account_currency")...)
-
-	pipeline = append(pipeline, LookupAndUnwind("files", "passport_attachment", "passport")...)
-	pipeline = append(pipeline, LookupAndUnwind("files", "ticket_attachment", "ticket")...)
-	pipeline = append(pipeline, LookupAndUnwind("files", "visa_attachment", "visa")...)
-	pipeline = append(pipeline, LookupAndUnwind("files", "education_loa_attachment", "education_loa")...)
-	pipeline = append(pipeline, LookupAndUnwind("files", "business_letter_attachment", "business_letter")...)
-	pipeline = append(pipeline, LookupAndUnwind("files", "business_supporting_attachment", "business_supporting")...)
-	pipeline = append(pipeline, LookupAndUnwind("files", "health_letter_attachment", "health_letter")...)
 
 	return pipeline
 }

@@ -47,10 +47,10 @@ type Request struct {
 	Passport           File  `json:"passport" bson:"passport"`
 	Ticket             File  `json:"ticket" bson:"ticket"`
 	Visa               *File `json:"visa,omitempty" bson:"visa,omitempty"`
-	BusinessLicense    *File `json:"business_license" bson:"business_license"`
-	EducationLoa       *File `json:"education_loa" bson:"education_loa"`
-	HealthLetter       *File `json:"health_letter" bson:"health_letter"`
-	BusinessSupporting *File `json:"business_supporting" bson:"business_supporting"`
+	BusinessLicense    *File `json:"business_license,omitempty" bson:"business_license,omitempty"`
+	EducationLoa       *File `json:"education_loa,omitempty" bson:"education_loa,omitempty"`
+	HealthLetter       *File `json:"health_letter,omitempty" bson:"health_letter,omitempty"`
+	BusinessSupporting *File `json:"business_supporting,omitempty" bson:"business_supporting,omitempty"`
 
 	// Validation Fields
 	ValidatedAverageDeposit    *float64            `json:"validated_average_deposit,omitempty" bson:"validated_average_deposit,omitempty"`
@@ -74,7 +74,7 @@ type Request struct {
 	// Audit
 	CreatedAt        time.Time  `json:"created_at" bson:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at" bson:"updated_at"`
-	RequestedAt      *time.Time `json:"requested_at" bson:"requested_at"`
+	RequestedAt      *time.Time `json:"requested_at,omitempty" bson:"requested_at,omitempty"`
 	AuthorizedAt     *time.Time `json:"authorized_at,omitempty" bson:"authorized_at,omitempty"`
 	RejectedAt       *time.Time `json:"rejected_at,omitempty" bson:"rejected_at,omitempty"`
 	ValidatedAt      *time.Time `json:"validated_at,omitempty" bson:"validated_at,omitempty"`
@@ -85,7 +85,7 @@ type Request struct {
 
 	CreatedBy primitive.ObjectID `json:"created_by" bson:"created_by"`
 
-	Creater      *User               `json:"creater,omitempty" bson:"creater,omitempty"`
+	Creator      *User               `json:"creator,omitempty" bson:"creator,omitempty"`
 	RequestedBy  *primitive.ObjectID `json:"requested_by,omitempty" bson:"requested_by,omitempty"`
 	Requester    *User               `json:"requester,omitempty" bson:"requester,omitempty"`
 	UpdatedBy    *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`

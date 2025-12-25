@@ -38,7 +38,6 @@ func (rr *roleRepository) FindByID(ctx context.Context, role_id primitive.Object
 }
 
 func (rr *roleRepository) FindAll(ctx context.Context) ([]model.Role, error) {
-
 	pipeline := mongo.Pipeline{
 		bson.D{
 			{Key: "$match", Value: bson.D{
