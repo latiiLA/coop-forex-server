@@ -13,9 +13,9 @@ import (
 )
 
 // SendEmail sends an email with the provided subject and body to the given recipient
-func SendEmail(to1, to2 string, subject string, body string, request model.Request) error {
+func SendEmail(to, cc, bcc []string, subject string, body string, request model.Request) error {
 	// Load sender info from environment variables
-	from := configs.MailSender
+	from := configs.MailUsername
 	password := configs.MailPassword
 	smtpHost := configs.MailServer
 	smtpPort, err := strconv.Atoi(configs.MailPort)
@@ -26,13 +26,6 @@ func SendEmail(to1, to2 string, subject string, body string, request model.Reque
 
 	branchName := "N/A"
 	departmentName := "N/A"
-
-	if request.Branch != nil {
-		branchName = request.Branch.Name
-	}
-	if request.Department != nil {
-		departmentName = request.Department.Name
-	}
 
 	if request.Branch != nil {
 		branchName = request.Branch.Name
@@ -76,8 +69,14 @@ func SendEmail(to1, to2 string, subject string, body string, request model.Reque
 	// Compose the email
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)
-	m.SetHeader("To", to1)
-	m.SetHeader("Cc", to2)
+	m.SetHeader("To", to...)
+	if len(cc) > 0 {
+		m.SetHeader("Cc", cc...)
+	}
+	if len(bcc) > 0 {
+		m.SetHeader("Bcc", bcc...)
+	}
+
 	m.SetHeader("Subject", subject, fmt.Sprintf("<%s@coop-forex>", request.RequestCode))
 	m.SetBody("text/html", htmlBody)
 
@@ -93,20 +92,27 @@ func SendEmail(to1, to2 string, subject string, body string, request model.Reque
 	// Setup dialer
 	d := gomail.NewDialer(smtpHost, smtpPort, from, password)
 
+	s, err := d.Dial()
+	if err != nil {
+		log.Printf("Failed to dial SMTP server: %v", err)
+		return err
+	}
+	defer s.Close()
+
 	// Send the email
-	if err := d.DialAndSend(m); err != nil {
+	if err := gomail.Send(s, m); err != nil {
 		log.Printf("Failed to send email: %v", err)
 		return err
 	}
 
-	log.Println("Email sent successfully to", to1, to2)
+	log.Println("Email sent successfully to", to, cc, bcc)
 	return nil
 }
 
 // SendEmail sends an email with the provided subject and body to the given recipient
-func SendAcknowledgementEmail(to string, subject string, body string, request model.Request) error {
+func SendAcknowledgementEmail(to, cc, bcc []string, subject string, body string, request model.Request) error {
 	// Load sender info from environment variables
-	from := configs.MailSender
+	from := configs.MailUsername
 	password := configs.MailPassword
 	smtpHost := configs.MailServer
 	smtpPort, err := strconv.Atoi(configs.MailPort)
@@ -117,13 +123,6 @@ func SendAcknowledgementEmail(to string, subject string, body string, request mo
 
 	branchName := "N/A"
 	departmentName := "N/A"
-
-	if request.Branch != nil {
-		branchName = request.Branch.Name
-	}
-	if request.Department != nil {
-		departmentName = request.Department.Name
-	}
 
 	if request.Branch != nil {
 		branchName = request.Branch.Name
@@ -167,7 +166,14 @@ func SendAcknowledgementEmail(to string, subject string, body string, request mo
 	// Compose the email
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)
-	m.SetHeader("To", to)
+	m.SetHeader("To", to...)
+	if len(cc) > 0 {
+		m.SetHeader("Cc", cc...)
+	}
+	if len(bcc) > 0 {
+		m.SetHeader("Bcc", bcc...)
+	}
+
 	m.SetHeader("Subject", subject, fmt.Sprintf("<%s@coop-forex>", request.RequestCode))
 	m.SetBody("text/html", htmlBody)
 
@@ -184,7 +190,14 @@ func SendAcknowledgementEmail(to string, subject string, body string, request mo
 	d := gomail.NewDialer(smtpHost, smtpPort, from, password)
 
 	// Send the email
-	if err := d.DialAndSend(m); err != nil {
+	s, err := d.Dial()
+	if err != nil {
+		log.Printf("Failed to dial SMTP server: %v", err)
+		return err
+	}
+	defer s.Close()
+
+	if err := gomail.Send(s, m); err != nil {
 		log.Printf("Failed to send email: %v", err)
 		return err
 	}

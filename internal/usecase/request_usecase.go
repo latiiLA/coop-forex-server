@@ -263,7 +263,7 @@ func (ru *requestUsecase) AuthorizeOrgRequest(ctx context.Context, authUserID pr
 	body := fmt.Sprintf("A new fcy request with request code %s has been created at %s.", requestData.RequestCode, now.Format("2006-01-02 15:04:05"))
 
 	go func() {
-		err := utils.SendEmail(configs.MailReciever, configs.MailReciever, subject, body, *requestData)
+		err := utils.SendEmail(configs.MailRequestAuthorizedTo, configs.MailRequestAuthorizedBcc, configs.MailRequestApprovedBcc, subject, body, *requestData)
 		if err != nil {
 			log.Warnf("Failed to send email for request %s: %v", requestID.Hex(), err)
 		}
@@ -366,11 +366,13 @@ func (ru *requestUsecase) SendRequest(ctx context.Context, authUserID primitive.
 	body := fmt.Sprintf("A new fcy request with request code %s has been created at %s.", requestData.RequestCode, now.Format("2006-01-02 15:04:05"))
 
 	go func() {
-		err := utils.SendAcknowledgementEmail(configs.MailReciever, subject, body, *requestData)
+		err := utils.SendAcknowledgementEmail(configs.MailRequestSentTo, configs.MailRequestSentCc, configs.MailRequestSentBcc, subject, body, *requestData)
 		if err != nil {
 			log.Warnf("Failed to send email for request %s: %v", requestID.Hex(), err)
 		}
 	}()
+
+	fmt.Print(configs.MailRequestSentTo, configs.MailRequestSentCc, configs.MailRequestSentBcc, configs.MailUsername)
 
 	return nil
 }
