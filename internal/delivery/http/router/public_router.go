@@ -16,7 +16,8 @@ func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.Route
 	userRepo := repository.NewUserRepository(db)
 	roleRepo := repository.NewRoleRepository(db)
 	profileRepo := repository.NewProfileRepository(db)
-	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, timeout, db.Client())
+	tokenRepo := repository.NewTokenBlacklistRepository(db)
+	userUsecase := usecase.NewUserUsecase(userRepo, roleRepo, profileRepo, tokenRepo, timeout, db.Client())
 	userController := controller.NewUserController(userUsecase)
 
 	// middleware.AuthorizeRoles("admin")
@@ -28,6 +29,7 @@ func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.Route
 	group.GET("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{"superadmin"}, []string{"user:view"}), userController.GetAllUsers)
 	group.PUT("/users/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{"admin"}, []string{"user:update"}), userController.UpdateUser)
 	group.GET("/ip", middleware.JwtAuthMiddleware(configs.JwtSecret), userController.IP)
+	group.POST("/refreshtoken", userController.RefreshToken)
 
 	// group.PATCH("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.DeleteUser)
 
