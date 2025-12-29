@@ -10,12 +10,15 @@ import (
 )
 
 var (
-	JwtSecret        string
-	MongoURL         string
-	Timeout          time.Duration
-	DisableMigration string
-	FileUploadPath   string
-	LogLevel         string
+	JwtSecret          string
+	RefreshJwtSecret   string
+	AccessTokenExpiry  time.Duration
+	RefreshTokenExpiry time.Duration
+	MongoURL           string
+	Timeout            time.Duration
+	DisableMigration   string
+	FileUploadPath     string
+	LogLevel           string
 
 	// Mail env
 	MailServer   string
@@ -88,6 +91,31 @@ func LoadConfig() {
 	JwtSecret = os.Getenv("JWT_SECRET")
 	if JwtSecret == "" {
 		log.Fatal("JWT_SECRET is required but not set")
+	}
+
+	RefreshJwtSecret = os.Getenv("REFRESH_JWT_SECRET")
+	if JwtSecret == "" {
+		log.Fatal("REFRESH_JWT_SECRET is required but not set")
+	}
+
+	accessTokenStr := os.Getenv("ACCESS_TOKEN_EXPIRY")
+	if accessTokenStr == "" {
+		log.Fatalf("ACCESS_TOKEN_EXPIRY is required but not set")
+	}
+
+	AccessTokenExpiry, err = time.ParseDuration(accessTokenStr)
+	if err != nil {
+		log.Fatalf("Invalid ACCESS_TOKEN_EXPIRY format: %v", err)
+	}
+
+	refreshTokenStr := os.Getenv("REFRESH_TOKEN_EXPIRY")
+	if refreshTokenStr == "" {
+		log.Fatalf("REFRESH_TOKEN_EXPIRY is required but not set")
+	}
+
+	RefreshTokenExpiry, err = time.ParseDuration(refreshTokenStr)
+	if err != nil {
+		log.Fatalf("Invalid REFRESH_TOKEN_EXPIRY format: %v", err)
 	}
 
 	timeoutStr := os.Getenv("APP_TIMEOUT")

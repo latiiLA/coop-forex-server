@@ -68,6 +68,7 @@ type LoginResponseDTO struct {
 	DepartmentID *primitive.ObjectID `json:"department_id,omitempty" bson:"department_id,omitempty"`
 	BranchID     *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
 	Token        string              `json:"token" bson:"-"`
+	RefreshToken string              `json:"refresh_token" bson:"-"`
 }
 
 type UserResponseDTO struct {

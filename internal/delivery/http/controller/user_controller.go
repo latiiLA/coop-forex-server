@@ -18,6 +18,7 @@ type UserController interface {
 	GetAllUsers(c *gin.Context)
 	UpdateUser(c *gin.Context)
 	IP(c *gin.Context)
+	RefreshToken(c *gin.Context)
 }
 
 type userController struct {
@@ -153,4 +154,28 @@ func (uc *userController) IP(c *gin.Context) {
 
 	logrus.Info("request coming from", clientIP)
 	c.JSON(http.StatusOK, response.SuccessResponse{Data: map[string]string{"ip": clientIP}, Message: "client ip"})
+}
+
+func (ac *userController) RefreshToken(ctx *gin.Context) {
+	var refreshInput model.RefreshTokenDTO
+	if err := ctx.ShouldBindJSON(&refreshInput); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	clientIP := ctx.ClientIP() // get client IP
+
+	access_token, refresh_token, err := ac.userUsecase.RefreshToken(ctx, refreshInput, clientIP)
+	if err != nil {
+		logrus.Error("invalid token", err)
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		return
+	}
+
+	response := model.TokenResponseDTO{
+		AccessToken:  access_token,
+		RefreshToken: refresh_token,
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
