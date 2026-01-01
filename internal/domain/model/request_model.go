@@ -11,9 +11,9 @@ import (
 type Request struct {
 	ID                     primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	BranchID               *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
-	Branch                 *Branch             `json:"branch,omitempty" bson:"branch,omitempty"`
+	Branch                 *Branch             `json:"branch,omitempty" bson:"-"`
 	DepartmentID           *primitive.ObjectID `json:"department_id,omitempty" bson:"department_id,omitempty"`
-	Department             *Department         `json:"department,omitempty" bson:"department,omitempty"`
+	Department             *Department         `json:"department,omitempty" bson:"-"`
 	RequestCode            string              `json:"request_code" bson:"request_code"`
 	ApplicantName          string              `json:"applicant_name" bson:"applicant_name"`
 	ApplicantAccountNumber string              `json:"applicant_account_number" bson:"applicant_account_number"`
@@ -46,21 +46,21 @@ type Request struct {
 
 	Passport           File  `json:"passport" bson:"passport"`
 	Ticket             File  `json:"ticket" bson:"ticket"`
-	Visa               *File `json:"visa,omitempty" bson:"visa,omitempty"`
-	BusinessLicense    *File `json:"business_license,omitempty" bson:"business_license,omitempty"`
-	EducationLoa       *File `json:"education_loa,omitempty" bson:"education_loa,omitempty"`
-	HealthLetter       *File `json:"health_letter,omitempty" bson:"health_letter,omitempty"`
-	BusinessSupporting *File `json:"business_supporting,omitempty" bson:"business_supporting,omitempty"`
+	Visa               *File `json:"visa,omitempty" bson:"-"`
+	BusinessLicense    *File `json:"business_license,omitempty" bson:"-"`
+	EducationLoa       *File `json:"education_loa,omitempty" bson:"-"`
+	HealthLetter       *File `json:"health_letter,omitempty" bson:"-"`
+	BusinessSupporting *File `json:"business_supporting,omitempty" bson:"-"`
 
 	// Validation Fields
 	ValidatedAverageDeposit    *float64            `json:"validated_average_deposit,omitempty" bson:"validated_average_deposit,omitempty"`
 	ValidatedAccountCurrencyID *primitive.ObjectID `json:"validated_account_currency_id,omitempty" bson:"validated_account_currency_id,omitempty"`
-	ValidatedAccountCurrency   *Currency           `json:"validated_account_currency,omitempty" bson:"validated_account_currency,omitempty"`
+	ValidatedAccountCurrency   *Currency           `json:"validated_account_currency,omitempty" bson:"-"`
 	ValidatedCurrentBalance    *float64            `json:"validated_current_balance,omitempty" bson:"validated_current_balance,omitempty"`
 
 	// Approved Fields
 	ApprovedCurrencyIDs *[]primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
-	ApprovedCurrencies  *[]Currency           `json:"approved_currencies,omitempty" bson:"approved_currencies,omitempty"`
+	ApprovedCurrencies  *[]Currency           `json:"approved_currencies,omitempty" bson:"-"`
 	ApprovedAmounts     *[]float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
 	AcceptanceStatus    *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
 
@@ -83,31 +83,30 @@ type Request struct {
 	DeclinedAt       *time.Time `json:"declined_at,omitempty" bson:"declined_at,omitempty"`
 	SystemDeclinedAt *time.Time `json:"system_declined_at,omitempty" bson:"system_declined_at,omitempty"`
 
-	CreatedBy primitive.ObjectID `json:"created_by" bson:"created_by"`
-
-	Creator      *User               `json:"creator,omitempty" bson:"creator,omitempty"`
+	CreatedBy    primitive.ObjectID  `json:"created_by" bson:"created_by"`
+	Creator      User                `json:"creator" bson:"creator"`
 	RequestedBy  *primitive.ObjectID `json:"requested_by,omitempty" bson:"requested_by,omitempty"`
-	Requester    *User               `json:"requester,omitempty" bson:"requester,omitempty"`
+	Requester    *User               `json:"requester,omitempty" bson:"-"`
 	UpdatedBy    *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	AuthorizedBy *primitive.ObjectID `json:"authorized_by,omitempty" bson:"authorized_by,omitempty"`
-	Authorizer   *User               `json:"authorizer,omitempty" bson:"authorizer,omitempty"`
+	Authorizer   *User               `json:"authorizer,omitempty" bson:"-"`
 	ApprovedBy   *primitive.ObjectID `json:"approved_by,omitempty" bson:"approved_by,omitempty"`
-	Approver     *User               `json:"approver,omitempty" bson:"approver,omitempty"`
+	Approver     *User               `json:"approver,omitempty" bson:"-"`
 	ValidatedBy  *primitive.ObjectID `json:"validated_by,omitempty" bson:"validated_by,omitempty"`
-	Validater    *User               `json:"validater,omitempty" bson:"validater,omitempty"`
+	Validater    *User               `json:"validater,omitempty" bson:"-"`
 	RejectedBy   *primitive.ObjectID `json:"rejected_by,omitempty" bson:"rejected_by,omitempty"`
-	Rejecter     *User               `json:"rejecter,omitempty" bson:"rejecter,omitempty"`
+	Rejecter     *User               `json:"rejecter,omitempty" bson:"-"`
 	AcceptedBy   *primitive.ObjectID `json:"accepted_by,omitempty" bson:"accepted_by,omitempty"`
-	Accepter     *User               `json:"accepter,omitempty" bson:"accepter,omitempty"`
+	Accepter     *User               `json:"accepter,omitempty" bson:"-"`
 	DeclinedBy   *primitive.ObjectID `json:"declined_by,omitempty" bson:"declined_by,omitempty"`
-	Decliner     *User               `json:"decliner,omitempty" bson:"decliner,omitempty"`
+	Decliner     *User               `json:"decliner,omitempty" bson:"-"`
 	DeletedBy    *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt    *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	IsDeleted    bool                `json:"is_deleted" bson:"is_deleted"`
 
-	LockedBy      *primitive.ObjectID `json:"locked_by,omitempty" bson:"locked_by"`
-	LockedAt      *time.Time          `json:"locked_at,omitempty" bson:"locked_at"`
-	LockExpiresAt *time.Time          `json:"lock_expires_at,omitempty" bson:"lock_expires_at"`
+	LockedBy      *primitive.ObjectID `json:"locked_by,omitempty" bson:"locked_by,omitempty"`
+	LockedAt      *time.Time          `json:"locked_at,omitempty" bson:"locked_at,omitempty"`
+	LockExpiresAt *time.Time          `json:"lock_expires_at,omitempty" bson:"lock_expires_at,omitempty"`
 }
 
 type RequestDTO struct {
@@ -183,11 +182,11 @@ type ParsedApproval struct {
 
 type RequestRepository interface {
 	Create(ctx context.Context, request *Request) error
-	FindByID(ctx context.Context, request_id primitive.ObjectID) (*Request, error)
-	FindAll(ctx context.Context) ([]Request, error)
+	FindByID(ctx context.Context, request_id primitive.ObjectID, populate bool) (*Request, error)
+	FindAll(ctx context.Context, populate bool) ([]Request, error)
 	Validate(ctx context.Context, request_id primitive.ObjectID, request *Request) error
-	FindAllByOrgID(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]Request, error)
-	FindOrgByRequestStatus(ctx context.Context, orgID primitive.ObjectID, orgKey, request_status string) ([]Request, error)
+	FindAllByOrgID(ctx context.Context, orgKey string, orgID primitive.ObjectID, populate bool) ([]Request, error)
+	FindOrgByRequestStatus(ctx context.Context, orgID primitive.ObjectID, orgKey, request_status string, populate bool) ([]Request, error)
 	Update(ctx context.Context, requestID primitive.ObjectID, request *Request) error
-	FindByRequestStatus(ctx context.Context, request_status string) ([]Request, error)
+	FindByRequestStatus(ctx context.Context, request_status string, populate bool) ([]Request, error)
 }
