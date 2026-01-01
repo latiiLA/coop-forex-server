@@ -11,6 +11,7 @@ type Branch struct {
 	ID                primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	Name              string              `json:"name" bson:"name"`
 	BranchCode        string              `json:"branch_code" bson:"branch_code"`
+	Email             string              `json:"email" bson:"email"`
 	Address           string              `json:"address" bson:"address"`
 	DistrictID        primitive.ObjectID  `json:"district_id" bson:"district_id"`
 	District          *District           `json:"district,omitempty" bson:"district,omitempty"`

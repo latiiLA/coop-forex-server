@@ -64,7 +64,7 @@ func SendEmail(to, cc, bcc []string, subject string, body string, request model.
 			<p style="margin: 0;">This is an automated message. Please do not reply.</p>
 		</div>
 	</div>
-	`, body, request.RequestCode, departmentName, branchName)
+	`, body, request.RequestCode, branchName, departmentName)
 
 	// Compose the email
 	m := gomail.NewMessage()
@@ -161,7 +161,7 @@ func SendAcknowledgementEmail(to, cc, bcc []string, subject string, body string,
 			<p style="margin: 0;">This is an automated message. Please do not reply.</p>
 		</div>
 	</div>
-	`, body, request.RequestCode, departmentName, branchName)
+	`, body, request.RequestCode, branchName, departmentName)
 
 	// Compose the email
 	m := gomail.NewMessage()

@@ -21,7 +21,7 @@ type User struct {
 	CreatedAt   time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at" bson:"updated_at"`
 	CreatedBy   primitive.ObjectID  `json:"created_by" bson:"created_by"`
-	Creator     *User               `json:"creator,omitempty" bson:"creator,omitempty"`
+	Creator     *User               `json:"creator,omitempty" bson:"omitempty"`
 	Updater     *User               `json:"updater,omitempty" bson:"updater,omitempty"`
 	UpdatedBy   *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy   *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
