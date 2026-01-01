@@ -71,7 +71,12 @@ func main() {
 
 	log.Info("✅ Connected to DB!")
 
-	db := client.Database("coop_forex_db")
+	db_name := "forex_db"
+	if configs.DBName != "" {
+		db_name = configs.DBName
+	}
+
+	db := client.Database(db_name)
 	timeout := configs.Timeout
 
 	// Start the routes
@@ -98,10 +103,10 @@ func main() {
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.RateLimitMiddleware())
 
-	r.Static("/uploads", "./uploads") // allow upload access
-
 	// create an API group
 	api := r.Group("/api")
+
+	api.Static("/uploads", "./uploads") // allow upload access
 
 	router.RouterSetup(api, timeout, db)
 

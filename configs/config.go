@@ -14,6 +14,7 @@ var (
 	RefreshJwtSecret   string
 	AccessTokenExpiry  time.Duration
 	RefreshTokenExpiry time.Duration
+	DBName             string
 	MongoURL           string
 	Timeout            time.Duration
 	DisableMigration   string
@@ -76,6 +77,11 @@ func LoadConfig() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found or couldn't load it, relying on environment variables", err)
+	}
+
+	DBName = os.Getenv("DB_NAME")
+	if DBName == "" {
+		log.Print("DBName is required but not set")
 	}
 
 	MongoURL = os.Getenv("MONGO_URL")
