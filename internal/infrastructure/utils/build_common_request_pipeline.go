@@ -5,6 +5,22 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+func ProjectIfNotNull(field string) bson.E {
+	return bson.E{
+		Key: field,
+		Value: bson.D{
+			{Key: "$cond", Value: bson.A{
+				bson.D{{Key: "$and", Value: bson.A{
+					bson.D{{Key: "$ne", Value: bson.A{"$" + field, bson.D{}}}},     // not empty object
+					bson.D{{Key: "$ne", Value: bson.A{"$" + field + "._id", nil}}}, // _id exists
+				}}},
+				"$" + field,
+				"$$REMOVE",
+			}},
+		},
+	}
+}
+
 func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 	var pipeline mongo.Pipeline
 
@@ -67,6 +83,8 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		{Key: "account_currency_id", Value: 1},
 		{Key: "fcy_requested_amount", Value: 1},
 		{Key: "total_fcy_requested", Value: 1},
+		{Key: "total_fcy_generated", Value: 1},
+		{Key: "average_deposit", Value: 1},
 		{Key: "current_fcy_performance", Value: 1},
 		{Key: "accounts_to_deduct", Value: 1},
 		{Key: "fcy_acceptance_mode", Value: 1},
@@ -93,14 +111,28 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 	}
 
 	if populate {
-		project = append(project, bson.E{Key: "creator", Value: 1})
-		project = append(project, bson.E{Key: "requester", Value: 1})
-		project = append(project, bson.E{Key: "authorizer", Value: 1})
-		project = append(project, bson.E{Key: "validater", Value: 1})
-		project = append(project, bson.E{Key: "rejecter", Value: 1})
-		project = append(project, bson.E{Key: "approver", Value: 1})
-		project = append(project, bson.E{Key: "accepter", Value: 1})
-		project = append(project, bson.E{Key: "decliner", Value: 1})
+		// project = append(project, bson.E{Key: "creator", Value: 1})
+		// project = append(project, bson.E{Key: "requester", Value: 1})
+		// project = append(project, bson.E{Key: "authorizer", Value: 1})
+		// project = append(project, bson.E{Key: "validater", Value: 1})
+		// project = append(project, bson.E{Key: "rejecter", Value: 1})
+		// project = append(project, bson.E{Key: "approver", Value: 1})
+		// project = append(project, bson.E{Key: "accepter", Value: 1})
+		// project = append(project, bson.E{Key: "decliner", Value: 1})
+		users := []string{
+			"creator",
+			"requester",
+			"authorizer",
+			"validater",
+			"rejecter",
+			"approver",
+			"accepter",
+			"decliner",
+		}
+
+		for _, u := range users {
+			project = append(project, ProjectIfNotNull(u))
+		}
 
 		project = append(project, bson.E{Key: "requested_at", Value: 1})
 		project = append(project, bson.E{Key: "authorized_at", Value: 1})

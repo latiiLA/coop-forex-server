@@ -6,6 +6,7 @@ import (
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -172,7 +173,7 @@ func (rr *requestRepository) FindOrgByRequestStatus(ctx context.Context, orgID p
 	return requests, nil
 }
 
-func (rr *requestRepository) Update(ctx context.Context, requestID primitive.ObjectID, request *model.Request) error {
+func (rr *requestRepository) Update(ctx context.Context, requestID primitive.ObjectID, request *model.RequestUpdate) error {
 	update := bson.M{
 		"$set": request,
 	}
@@ -214,7 +215,7 @@ func (rr *requestRepository) FindByRequestStatus(ctx context.Context, request_st
 		return nil, err
 	}
 
-	fmt.Println("requests", len(requests))
+	logrus.Println("requests", len(requests), requests)
 
 	if len(requests) == 0 {
 		return []model.Request{}, nil
