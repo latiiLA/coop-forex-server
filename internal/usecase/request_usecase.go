@@ -437,6 +437,10 @@ func (ru *requestUsecase) DeleteRequest(ctx context.Context, authUserID primitiv
 		return errors.New("the request id doesn't exist")
 	}
 
+	if existingRequest.RequestStatus != "Drafted" {
+		return errors.New("This request cannot be deleted")
+	}
+
 	// Copy the data
 	forexRequest := model.RequestUpdate{}
 	copier.Copy(&forexRequest, existingRequest)
@@ -560,6 +564,17 @@ func (ru *requestUsecase) RejectRequest(ctx context.Context, authUserID primitiv
 	if err != nil {
 		fmt.Println("the request_id doesn't exist")
 		return errors.New("the request id doesn't exist")
+	}
+
+	existingUser, err := ru.userRepository.FindByID(ctx, authUserID)
+	if err != nil {
+		return errors.New("unathorized access, unable to reject the request")
+	}
+
+	if existingUser.Role.Name == "BRANCH_AUTHORIZER" {
+		if existingUser.Profile.BranchID != existingRequest.BranchID && existingUser.Profile.DepartmentID != existingRequest.DepartmentID {
+			return errors.New("unauthorized, you are not allowed to reject the request")
+		}
 	}
 
 	// Copy the data
