@@ -126,6 +126,9 @@ func (br *branchRepository) FindAll(ctx context.Context) ([]model.Branch, error)
 			{Key: "$project", Value: bson.D{
 				{Key: "_id", Value: 1},
 				{Key: "name", Value: 1},
+				{Key: "branch_code", Value: 1},
+				{Key: "district_id", Value: 1},
+				{Key: "district", Value: 1},
 				{Key: "email", Value: 1},
 				{Key: "address", Value: 1},
 				{Key: "created_at", Value: 1},
