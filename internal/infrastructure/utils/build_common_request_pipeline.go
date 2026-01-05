@@ -96,6 +96,13 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		{Key: "fcy_requested_id", Value: 1},
 		{Key: "approved_currency_ids", Value: 1},
 		{Key: "branch_recommendation", Value: 1},
+		{Key: "rejection_reason", Value: 1},
+
+		{Key: "validated_average_deposit", Value: 1},
+		{Key: "validated_current_balance", Value: 1},
+		{Key: "validated_account_currency_id", Value: 1},
+
+		{Key: "approved_amounts", Value: 1},
 
 		{Key: "created_by", Value: 1},
 		{Key: "requested_by", Value: 1},
