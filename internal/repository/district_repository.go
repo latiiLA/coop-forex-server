@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
+	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -21,7 +22,19 @@ func NewDistrictRepository(db *mongo.Database) model.DistrictRepository {
 func (dr *districtRepository) FindAll(ctx context.Context) ([]model.District, error) {
 	var districts []model.District
 
-	cursor, err := dr.collection.Find(ctx, bson.M{"is_deleted": false})
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "is_deleted", Value: false},
+		}}},
+
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "name", Value: 1},
+		}}},
+	}
+
+	pipeline = append(pipeline, utils.LookupUserWithProfile("created_by", "creator")...)
+
+	cursor, err := dr.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
