@@ -1,0 +1,26 @@
+
+[
+  {
+    "delete": "districts",
+    "deletes": [ 
+      { "q": { "_id": { "$oid": "676e44274d7cd2c7251d88e8" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48894d7cd2c7251d88f4" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48a34d7cd2c7251d8900" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48c24d7cd2c7251d890c" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48e34d7cd2c7251d891c" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e49084d7cd2c7251d8928" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e494c4d7cd2c7251d8934" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e49644d7cd2c7251d8940" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e49964d7cd2c7251d894a" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e49bb4d7cd2c7251d8954" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e49e34d7cd2c7251d8960" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e4a1b4d7cd2c7251d896c" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e4a3a4d7cd2c7251d8978" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e4a684d7cd2c7251d8984" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e4ac14d7cd2c7251d8990" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e4adc4d7cd2c7251d899c" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e4b0a4d7cd2c7251d89a8" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "677430c85c2a0438962f6f32" } }, "limit": 1 }
+    ]
+  }
+]

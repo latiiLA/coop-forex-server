@@ -19,6 +19,10 @@ type Subprocess struct {
 	DeletedBy *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
 	DeletedAt *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	IsDeleted bool                `json:"is_deleted" bson:"is_deleted"`
+
+	Creator *User `json:"creator,omitempty" bson:"creator,omitempty"`
+	Updater *User `json:"updater,omitempty" bson:"updater,omitempty"`
+	Deleter *User `json:"deleter,omitempty" bson:"deleter,omitempty"`
 }
 
 type SubprocessRepository interface {

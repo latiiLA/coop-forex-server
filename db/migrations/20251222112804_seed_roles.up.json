@@ -1,0 +1,179 @@
+[
+  {
+    "insert": "roles",
+    "documents": [
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345678000" },
+        "name": "SUPERADMIN",
+        "permissions": [
+            "role:add",
+            "role:view",
+            "role:update",
+            "role:view-deleted",
+            "user:view",
+            "user:add",
+            "user:add-permission",
+            "user:update",
+            "travel_purpose:add",
+            "travel_purpose:view",
+            "subprocess:add",
+            "subprocess:view",
+            "process:add",
+            "process:view",
+            "currency:add",
+            "currency:view",
+            "department:add",
+            "department:view",
+            "country:add",
+            "country:view"
+        ],
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345678002" },
+        "name": "FOREX_APPROVER",
+        "permissions": [
+            "request:view-validated",
+            "request:view-declined",
+            "request:view",
+            "request:approve",
+            "request:reject",
+            "request:lock",
+            "request:unlock",
+            "request:view-approved",
+            "request:view-rejected",
+            "request:view-accepted"
+        ],
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345678003" },
+        "name": "FOREX_USER",
+        "permissions": [
+            "request:validate",
+            "request:view-authorized",
+            "request:view-validated",
+            "request:view-declined",
+            "request:view",
+            "request:reject",
+            "request:lock",
+            "request:unlock",
+            "request:view-approved",
+            "request:view-rejected",
+            "request:view-accepted"
+        ],
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345678004" },
+        "name": "BRANCH_AUTHORIZER",
+        "permissions": [
+            "request:status",
+            "request:view-orgreject",
+            "request:view-orgapproved",
+            "request:view-new",
+            "request:authorize",
+            "request:view-orgauthorized",
+            "request:view-orgrejected"
+        ],
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345678005" },
+        "name": "BRANCH_USER",
+        "permissions": [
+            "request:add",
+            "request:status",
+            "request:view-orgapproved",
+            "request:send",
+            "request:view-orgdrafted",
+            "request:update",
+            "request:delete",
+            "request:view-orgauthorized",
+            "request:view-orgrejected"
+        ],
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345678006" },
+        "name": "PROCESSOR_USER",
+        "permissions": [
+            "request:add",
+            "request:status",
+            "request:view-approved",
+            "request:send",
+            "request:view-orgdrafted",
+            "request:update",
+            "request:delete",
+            "request:view-orgauthorized",
+            "request:orgrejected",
+            "request:decline",
+            "request:view-declined",
+            "request:process",
+            "request:view-accepted"
+        ],
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345678007" },
+        "name": "PROCESSOR_AUTHORIZER",
+        "permissions": [
+            "request:status",
+            "request:orgreject",
+            "request:approved",
+            "request:view-new",
+            "request:authorize",
+            "request:view-orgauthorized",
+            "request:view-orgrejected",
+            "request:decline",
+            "request:view-declined",
+            "request:process",
+            "request:view-accepted"
+        ],
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "is_deleted": false
+      }
+    ]
+  }
+]

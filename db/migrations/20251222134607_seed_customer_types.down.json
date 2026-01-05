@@ -1,0 +1,9 @@
+[
+  {
+    "delete": "customer_types",
+    "deletes": [ 
+      { "q": { "_id": { "$oid": "66a7b8c9e4b0f12345678010" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "66a7b8c9e4b0f12345678011" } }, "limit": 1 }
+    ]
+  }
+]

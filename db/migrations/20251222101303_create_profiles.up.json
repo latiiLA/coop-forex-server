@@ -1,0 +1,31 @@
+[
+  {
+    "create": "profiles",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["first_name", "middle_name", "last_name", "birthday", "short_bio", "gender", "phone", "email", "department_id", "branch_id", "created_at", "updated_at"],
+        "properties": {
+          "first_name": { "bsonType": "string" },
+          "middle_name": { "bsonType": "string" },
+          "last_name": { "bsonType": "string" },
+          "birthday": { "bsonType": ["date", "null"] },
+          "short_bio": { "bsonType": ["string", "null"] },
+          "gender": { "bsonType": ["string", "null"] },
+          "phone": { "bsonType": ["string", "null"] },
+          "email": { "bsonType": ["string", "null"] },
+          "department_id": { "bsonType": ["objectId", "null"] },
+          "branch_id": { "bsonType": ["objectId", "null"] },
+          "created_at": { "bsonType": "date" },
+          "updated_at": { "bsonType": "date" }
+        }
+      }
+    }
+  },
+  {
+    "createIndexes": "profiles",
+    "indexes": [
+      { "key": { "email": 1 }, "name": "uniq_role_email", "unique": true }
+    ]
+  }
+]

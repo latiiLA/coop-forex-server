@@ -1,0 +1,12 @@
+[
+  {
+    "delete": "processes",
+    "deletes": [
+      { "q": { "_id": { "$oid": "676e44274d7cd2c7251d99e8" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48894d7cd2c7251d99f4" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48a34d7cd2c7251d9900" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48c24d7cd2c7251d990c" } }, "limit": 1 },
+      { "q": { "_id": { "$oid": "676e48e34d7cd2c7251d991c" } }, "limit": 1 }
+    ]
+  }
+]

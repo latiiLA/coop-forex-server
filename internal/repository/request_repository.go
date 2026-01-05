@@ -6,6 +6,7 @@ import (
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -26,7 +27,7 @@ func (rr *requestRepository) Create(ctx context.Context, request *model.Request)
 	return err
 }
 
-func (rr *requestRepository) FindAll(ctx context.Context) ([]model.Request, error) {
+func (rr *requestRepository) FindAll(ctx context.Context, populate bool) ([]model.Request, error) {
 
 	pipeline := mongo.Pipeline{
 		bson.D{
@@ -39,7 +40,7 @@ func (rr *requestRepository) FindAll(ctx context.Context) ([]model.Request, erro
 		},
 	}
 
-	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages()...)
+	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages(true)...)
 
 	cursor, err := rr.collection.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -80,19 +81,38 @@ func (rr *requestRepository) Validate(ctx context.Context, request_id primitive.
 	return nil
 }
 
-func (rr *requestRepository) FindByID(ctx context.Context, request_id primitive.ObjectID) (*model.Request, error) {
-	var request model.Request
-	filter := bson.M{"_id": request_id, "is_deleted": false}
+func (rr *requestRepository) FindByID(ctx context.Context, requestID primitive.ObjectID, populate bool) (*model.Request, error) {
+	var results []model.Request
 
-	err := rr.collection.FindOne(ctx, filter).Decode(&request)
+	pipeline := mongo.Pipeline{
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "_id", Value: requestID},
+				{Key: "is_deleted", Value: false},
+			}},
+		},
+	}
+
+	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages(populate)...)
+
+	cursor, err := rr.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
+	defer cursor.Close(ctx)
 
-	return &request, nil
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	if len(results) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	return &results[0], nil
 }
 
-func (rr *requestRepository) FindAllByOrgID(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
+func (rr *requestRepository) FindAllByOrgID(ctx context.Context, orgKey string, orgID primitive.ObjectID, populate bool) ([]model.Request, error) {
 	pipeline := mongo.Pipeline{
 		bson.D{
 			{Key: "$match", Value: bson.D{
@@ -102,7 +122,7 @@ func (rr *requestRepository) FindAllByOrgID(ctx context.Context, orgKey string, 
 		},
 	}
 
-	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages()...)
+	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages(true)...)
 
 	cursor, err := rr.collection.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -122,7 +142,7 @@ func (rr *requestRepository) FindAllByOrgID(ctx context.Context, orgKey string, 
 	return requests, nil
 }
 
-func (rr *requestRepository) FindOrgByRequestStatus(ctx context.Context, orgID primitive.ObjectID, orgKey, request_status string) ([]model.Request, error) {
+func (rr *requestRepository) FindOrgByRequestStatus(ctx context.Context, orgID primitive.ObjectID, orgKey, request_status string, populate bool) ([]model.Request, error) {
 	pipeline := mongo.Pipeline{
 		bson.D{
 			{Key: "$match", Value: bson.D{
@@ -133,7 +153,7 @@ func (rr *requestRepository) FindOrgByRequestStatus(ctx context.Context, orgID p
 		},
 	}
 
-	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages()...)
+	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages(true)...)
 
 	cursor, err := rr.collection.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -153,7 +173,7 @@ func (rr *requestRepository) FindOrgByRequestStatus(ctx context.Context, orgID p
 	return requests, nil
 }
 
-func (rr *requestRepository) Update(ctx context.Context, requestID primitive.ObjectID, request *model.Request) error {
+func (rr *requestRepository) Update(ctx context.Context, requestID primitive.ObjectID, request *model.RequestUpdate) error {
 	update := bson.M{
 		"$set": request,
 	}
@@ -172,7 +192,7 @@ func (rr *requestRepository) Update(ctx context.Context, requestID primitive.Obj
 	return nil
 }
 
-func (rr *requestRepository) FindByRequestStatus(ctx context.Context, request_status string) ([]model.Request, error) {
+func (rr *requestRepository) FindByRequestStatus(ctx context.Context, request_status string, populate bool) ([]model.Request, error) {
 	pipeline := mongo.Pipeline{
 		bson.D{
 			{Key: "$match", Value: bson.D{
@@ -182,7 +202,7 @@ func (rr *requestRepository) FindByRequestStatus(ctx context.Context, request_st
 		},
 	}
 
-	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages()...)
+	pipeline = append(pipeline, utils.BuildCommonRequestPipelineStages(true)...)
 
 	cursor, err := rr.collection.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -195,7 +215,7 @@ func (rr *requestRepository) FindByRequestStatus(ctx context.Context, request_st
 		return nil, err
 	}
 
-	fmt.Println("requests", len(requests))
+	logrus.Println("requests", len(requests), requests)
 
 	if len(requests) == 0 {
 		return []model.Request{}, nil

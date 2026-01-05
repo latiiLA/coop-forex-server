@@ -1,0 +1,223 @@
+[
+  {
+    "insert": "districts",
+    "documents": [
+      {
+        "_id": { "$oid": "676e44274d7cd2c7251d88e8" },
+        "name": "East Finfinne District",
+        "address": "Finfinne",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48894d7cd2c7251d88f4" },
+        "name": "South Finfinne District",
+        "address": "Finfinne",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48a34d7cd2c7251d8900" },
+        "name": "West Finfinne District",
+        "address": "Finfinne",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48e34d7cd2c7251d891c" },
+        "name": "North Finfinne District",
+        "address": "Finfinne",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48c24d7cd2c7251d890c" },
+        "name": "Central Finfinne District",
+        "address": "Finfinne",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e49084d7cd2c7251d8928" },
+        "name": "Adama District",
+        "address": "Adama",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e494c4d7cd2c7251d8934" },
+        "name": "Shashemene District",
+        "address": "Shashemene",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e49644d7cd2c7251d8940" },
+        "name": "Dire Dawa District",
+        "address": "Dire Dawa",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e49964d7cd2c7251d894a" },
+        "name": "Nekemte District",
+        "address": "Nekemte",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e49bb4d7cd2c7251d8954" },
+        "name": "Hawassa District",
+        "address": "Hawassa",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e49e34d7cd2c7251d8960" },
+        "name": "Jimma District",
+        "address": "Jimma",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e4a1b4d7cd2c7251d896c" },
+        "name": "Bahirdar District",
+        "address": "Bahirdar",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e4a3a4d7cd2c7251d8978" },
+        "name": "Mekelle District",
+        "address": "Mekelle",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+       {
+        "_id": { "$oid": "676e4a684d7cd2c7251d8984" },
+        "name": "Bale District",
+        "address": "Bale",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e4ac14d7cd2c7251d8990" },
+        "name": "Asella District",
+        "address": "Asella",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e4adc4d7cd2c7251d899c" },
+        "name": "Chiro District",
+        "address": "Chiro",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e4b0a4d7cd2c7251d89a8" },
+        "name": "Hossana District",
+        "address": "Hossana",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "677430c85c2a0438962f6f32" },
+        "name": "Head Office",
+        "address": "Finfinne",
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      }
+    ]
+  }
+]

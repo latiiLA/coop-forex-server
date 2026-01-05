@@ -21,23 +21,26 @@ type UserUsecase interface {
 	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.User, error)
 	UpdateUserByID(c context.Context, userID primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateUserRequestDTO) (*model.UserResponseDTO, error)
 	GetAllUsers(c context.Context) (*[]model.UserResponseDTO, error)
+	RefreshToken(c context.Context, refresh model.RefreshTokenDTO, clientIP string) (string, string, error)
 }
 
 type userUsecase struct {
-	userRepository    model.UserRepository
-	roleRepository    model.RoleRepository
-	profileRepository model.ProfileRepository
-	contextTimeout    time.Duration
-	client            *mongo.Client
+	userRepository     model.UserRepository
+	roleRepository     model.RoleRepository
+	profileRepository  model.ProfileRepository
+	tokenBlacklistRepo model.TokenBlacklistRepository
+	contextTimeout     time.Duration
+	client             *mongo.Client
 }
 
-func NewUserUsecase(userRepository model.UserRepository, roleRepository model.RoleRepository, profileRepository model.ProfileRepository, timeout time.Duration, client *mongo.Client) UserUsecase {
+func NewUserUsecase(userRepository model.UserRepository, roleRepository model.RoleRepository, profileRepository model.ProfileRepository, tokenBlacklistRepo model.TokenBlacklistRepository, timeout time.Duration, client *mongo.Client) UserUsecase {
 	return &userUsecase{
-		userRepository:    userRepository,
-		roleRepository:    roleRepository,
-		profileRepository: profileRepository,
-		contextTimeout:    timeout,
-		client:            client,
+		userRepository:     userRepository,
+		roleRepository:     roleRepository,
+		profileRepository:  profileRepository,
+		tokenBlacklistRepo: tokenBlacklistRepo,
+		contextTimeout:     timeout,
+		client:             client,
 	}
 }
 
@@ -162,6 +165,11 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		return nil, err
 	}
 
+	refeshToken, err := infrastructure.GenerateRefreshToken(existingUser.ID, ip)
+	if err != nil {
+		return nil, err
+	}
+
 	// // Update last login
 	// var now = time.Now()
 	// existingUser.LastLogin = &now
@@ -171,13 +179,14 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 	// }
 
 	response := model.LoginResponseDTO{
-		ID:          existingUser.ID,
-		FirstName:   existingUser.Profile.FirstName,
-		MiddleName:  existingUser.Profile.MiddleName,
-		Username:    existingUser.Username,
-		Role:        existingUser.Role.Name,
-		Permissions: effectivePerms,
-		Token:       accessToken,
+		ID:           existingUser.ID,
+		FirstName:    existingUser.Profile.FirstName,
+		MiddleName:   existingUser.Profile.MiddleName,
+		Username:     existingUser.Username,
+		Role:         existingUser.Role.Name,
+		Permissions:  effectivePerms,
+		Token:        accessToken,
+		RefreshToken: refeshToken,
 	}
 
 	return &response, nil
@@ -302,4 +311,88 @@ func (uc *userUsecase) GetAllUsers(ctx context.Context) (*[]model.UserResponseDT
 	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
 	defer cancel()
 	return uc.userRepository.FindAll(ctx)
+}
+
+func (a *userUsecase) RefreshToken(ctx context.Context, refreshToken model.RefreshTokenDTO, clientIP string) (string, string, error) {
+	// 1. Validate the refresh token
+	claims, err := infrastructure.ValidateRefreshToken(refreshToken.RefreshToken, clientIP)
+	if err != nil {
+		return "", "", err
+	}
+
+	// 2. Check if token is blacklisted
+	isBlacklisted, err := a.tokenBlacklistRepo.IsBlacklisted(ctx, refreshToken.RefreshToken)
+	if err != nil {
+		return "", "", err
+	}
+	if isBlacklisted {
+		return "", "", fmt.Errorf("Jwt is already black listed")
+	}
+
+	// 4. Retrieve user to generate new tokens and blacklist
+	userIDHex, ok := claims["userID"].(string)
+	if !ok {
+		return "", "", fmt.Errorf("userID missing or invalid in token")
+	}
+
+	userObjID, err := primitive.ObjectIDFromHex(userIDHex)
+	if err != nil {
+		return "", "", err
+	}
+
+	// 3. Blacklist the current refresh token
+	expUnix, ok := claims["exp"].(float64)
+	if !ok {
+		return "", "", fmt.Errorf("invalid expiration in token")
+	}
+	expTime := time.Unix(int64(expUnix), 0)
+
+	if err := a.tokenBlacklistRepo.BlacklistToken(ctx, refreshToken.RefreshToken, expTime, userObjID, clientIP); err != nil {
+		return "", "", fmt.Errorf("failed to blacklist token")
+	}
+
+	user, err := a.userRepository.FindByID(ctx, userObjID)
+	if err != nil {
+		return "", "", err
+	}
+	if user == nil {
+		return "", "", fmt.Errorf("user not found")
+	}
+
+	// 5. Retrieve user role
+	role, err := a.roleRepository.FindByID(ctx, user.Role.ID)
+	if err != nil {
+		return "", "", err
+	}
+	if role == nil {
+		return "", "", fmt.Errorf("role not found")
+	}
+
+	// 6. Generate new token pair (access + refresh)
+	branchID := primitive.NilObjectID
+	if user.Profile.BranchID != nil {
+		branchID = *user.Profile.BranchID
+	}
+
+	departmentID := primitive.NilObjectID
+	if user.Profile.DepartmentID != nil {
+		departmentID = *user.Profile.DepartmentID
+	}
+
+	permissions := []string{}
+	if user.Permissions != nil {
+		permissions = *user.Permissions
+	}
+
+	newAccessToken, err := infrastructure.GenerateToken(user.ID, role.Name, branchID, departmentID, permissions, clientIP)
+	if err != nil {
+		return "", "", err
+	}
+
+	newRefreshToken, err := infrastructure.GenerateRefreshToken(user.ID, clientIP)
+	if err != nil {
+		return "", "", err
+	}
+
+	return newAccessToken, newRefreshToken, nil
 }

@@ -1,0 +1,62 @@
+[
+  {
+    "insert": "processes",
+    "documents": [
+      {
+        "_id": { "$oid": "676e44274d7cd2c7251d99e8" },
+        "name": "Growth and Operations",
+        "created_at": { "$date": { "$numberLong": "1734912000000" } },
+        "updated_at": { "$date": { "$numberLong": "1734912000000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48894d7cd2c7251d99f4" },
+        "name": "Internet Free Banking",
+        "created_at": { "$date": { "$numberLong": "1734912000000" } },
+        "updated_at": { "$date": { "$numberLong": "1734912000000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48a34d7cd2c7251d9900" },
+        "name": "Agriculture and Cooperative Relations",
+        "created_at": { "$date": { "$numberLong": "1734912000000" } },
+        "updated_at": { "$date": { "$numberLong": "1734912000000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48c24d7cd2c7251d990c" },
+        "name": "Credit Approval and Portfolio",
+        "created_at": { "$date": { "$numberLong": "1734912000000" } },
+        "updated_at": { "$date": { "$numberLong": "1734912000000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      },
+      {
+        "_id": { "$oid": "676e48e34d7cd2c7251d991c" },
+        "name": "Technology and Strategy",
+        "created_at": { "$date": { "$numberLong": "1734912000000" } },
+        "updated_at": { "$date": { "$numberLong": "1734912000000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
+        "updated_by": null,
+        "deleted_by": null,
+        "deleted_at": null,
+        "is_deleted": false
+      }
+    ]
+  }
+]

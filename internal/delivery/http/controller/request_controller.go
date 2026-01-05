@@ -221,8 +221,8 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 		AccountCurrencyID:      accountCurrencyObjID,
 		FcyRequestedID:         fcyRequestedObjID,
 
-		PassportAttachment:           *passportID,
-		TicketAttachment:             *ticketID,
+		PassportAttachment:           passportID,
+		TicketAttachment:             ticketID,
 		BusinessLicenseAttachment:    businessLicenseID,
 		EducationLoaAttachment:       educationID,
 		BusinessSupportingAttachment: supportingLetterID,
@@ -310,7 +310,7 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 	// get user id from param
 	requestIDStr := c.Param("id")
 	if requestIDStr == "" {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "user ID is required"})
+		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "request ID is required"})
 		return
 	}
 
@@ -413,8 +413,8 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 	if err == nil {
 		passportID, err = rc.fileUsecase.AddFile(c, passport, "passport")
 		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload education file")
-			c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: "Failed to upload education file"})
+			logEntry.WithField("error", err.Error()).Warn("Failed to upload passport file")
+			c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: "Failed to upload passport file"})
 			return
 		}
 	}
@@ -477,23 +477,33 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 		RequestingAs:           request.RequestingAs,
 		AccountCurrencyID:      accountCurrencyObjID,
 		FcyRequestedID:         fcyRequestedObjID,
+	}
 
-		PassportAttachment:           *passportID,
-		TicketAttachment:             *ticketID,
-		BusinessLicenseAttachment:    businessLicenseID,
-		EducationLoaAttachment:       educationID,
-		BusinessSupportingAttachment: supportingLetterID,
+	if passportID != &primitive.NilObjectID {
+		fcyRequest.PassportAttachment = passportID
+	}
+	if ticketID != &primitive.NilObjectID {
+		fcyRequest.TicketAttachment = ticketID
+	}
+	if educationID != nil {
+		fcyRequest.EducationLoaAttachment = educationID
+	}
+	if businessLicenseID != nil {
+		fcyRequest.BusinessLicenseAttachment = businessLicenseID
+	}
+	if supportingLetterID != nil {
+		fcyRequest.BusinessSupportingAttachment = supportingLetterID
 	}
 
 	err = rc.requestUsecase.UpdateRequest(c, userID, requestID, &fcyRequest)
 	if err != nil {
-		logEntry.WithField("error", err.Error()).Warn("Failed to add the request")
+		logEntry.WithField("error", err.Error()).Warn("Failed to update the request")
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	logEntry.Info("Request updated successfully")
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request created successfully"})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request updated successfully"})
 }
 
 func (rc *requestController) ApproveRequest(c *gin.Context) {

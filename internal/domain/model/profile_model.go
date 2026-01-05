@@ -18,7 +18,9 @@ type Profile struct {
 	Phone        *string             `json:"phone,omitempty" bson:"phone,omitempty"`
 	Email        string              `json:"email" bson:"email"`
 	DepartmentID *primitive.ObjectID `json:"department_id,omitempty" bson:"department_id,omitempty"`
+	Department   *Department         `json:"department,omitempty" bson:"department,omitempty"`
 	BranchID     *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
+	Branch       *Branch             `json:"branch,omitempty" bson:"branch,omitempty"`
 	CreatedAt    time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt    time.Time           `json:"updated_at" bson:"updated_at"`
 }

@@ -21,7 +21,7 @@ type User struct {
 	CreatedAt   time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at" bson:"updated_at"`
 	CreatedBy   primitive.ObjectID  `json:"created_by" bson:"created_by"`
-	Creator     *User               `json:"creator,omitempty" bson:"creator,omitempty"`
+	Creator     *User               `json:"creator,omitempty" bson:"omitempty"`
 	Updater     *User               `json:"updater,omitempty" bson:"updater,omitempty"`
 	UpdatedBy   *primitive.ObjectID `json:"updated_by,omitempty" bson:"updated_by,omitempty"`
 	DeletedBy   *primitive.ObjectID `json:"deleted_by,omitempty" bson:"deleted_by,omitempty"`
@@ -68,6 +68,7 @@ type LoginResponseDTO struct {
 	DepartmentID *primitive.ObjectID `json:"department_id,omitempty" bson:"department_id,omitempty"`
 	BranchID     *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
 	Token        string              `json:"token" bson:"-"`
+	RefreshToken string              `json:"refresh_token" bson:"-"`
 }
 
 type UserResponseDTO struct {
