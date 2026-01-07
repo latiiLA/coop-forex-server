@@ -152,7 +152,7 @@ func SendAcknowledgementEmail(to, cc, bcc []string, subject string, body string,
 				<li><strong>Department:</strong> %s</li>
 			</ul>
 
-			<p>Please wait for response from relavant team.</p>
+			<p>Please wait for response from relevant team.</p>
 		</div>
 
 		<!-- Footer -->
