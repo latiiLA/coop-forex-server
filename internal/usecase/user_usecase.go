@@ -183,6 +183,7 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		FirstName:    existingUser.Profile.FirstName,
 		MiddleName:   existingUser.Profile.MiddleName,
 		Username:     existingUser.Username,
+		Email:        existingUser.Profile.Email,
 		Role:         existingUser.Role.Name,
 		Permissions:  effectivePerms,
 		Token:        accessToken,
