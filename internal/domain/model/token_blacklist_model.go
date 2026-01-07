@@ -20,7 +20,7 @@ type RefreshTokenDTO struct {
 }
 
 type TokenResponseDTO struct {
-	AccessToken  string `json:"access_token"`
+	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
