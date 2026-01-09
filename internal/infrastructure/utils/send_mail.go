@@ -40,7 +40,12 @@ func SendEmail(to, cc, bcc []string, subject string, body string, request model.
 		<!-- Header -->
 		<div style="background-color: #0693e3; padding: 20px; color: #fff; text-align: center;">
 			<div style="display: inline-flex; align-items: center; justify-content: center;">
-				<img src="cid:coop_logo" alt="Coop Logo" style="max-height: 33px; margin-right: 10px;" />
+				<img
+					src="cid:coop_logo"
+					alt="Coop Logo"
+					height="33"
+					style="display:block; height:33px; width:auto; margin-right:10px;"
+				/>
 				<h1 style="margin: 0; font-size: 2.5em; line-height: 1;">Forex </h1>
 			</div>
 		</div>
@@ -137,7 +142,13 @@ func SendAcknowledgementEmail(to, cc, bcc []string, subject string, body string,
 		<!-- Header -->
 		<div style="background-color: #0693e3; padding: 20px; color: #fff; text-align: center;">
 			<div style="display: inline-flex; align-items: center; justify-content: center;">
-				<img src="cid:coop_logo" alt="Coop Logo" style="max-height: 33px; margin-right: 10px;" />
+				<img
+					src="cid:coop_logo"
+					alt="Coop Logo"
+					height="33"
+					style="display:block; height:33px; width:auto; margin-right:10px;"
+				/>
+
 				<h1 style="margin: 0; font-size: 2.5em; line-height: 1;">Forex </h1>
 			</div>
 		</div>
