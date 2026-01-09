@@ -65,6 +65,7 @@ type LoginResponseDTO struct {
 	Role         string              `json:"role" bson:"role"`
 	Permissions  []string            `json:"permissions" bson:"permissions"`
 	Username     string              `json:"username" bson:"username"`
+	Email        string              `json:"email" bson:"email"`
 	DepartmentID *primitive.ObjectID `json:"department_id,omitempty" bson:"department_id,omitempty"`
 	BranchID     *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
 	Token        string              `json:"token" bson:"-"`

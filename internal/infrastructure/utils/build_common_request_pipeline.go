@@ -49,6 +49,7 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		pipeline = append(pipeline, LookupUserWithProfile("created_by", "creator")...)
 		pipeline = append(pipeline, LookupUserWithProfile("requested_by", "requester")...)
 		pipeline = append(pipeline, LookupUserWithProfile("authorized_by", "authorizer")...)
+		pipeline = append(pipeline, LookupUserWithProfile("rejected_by", "rejecter")...)
 		pipeline = append(pipeline, LookupUserWithProfile("validated_by", "validater")...)
 		pipeline = append(pipeline, LookupUserWithProfile("approved_by", "approver")...)
 		pipeline = append(pipeline, LookupUserWithProfile("accepted_by", "accepter")...)

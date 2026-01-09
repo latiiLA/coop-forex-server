@@ -131,6 +131,10 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		return nil, errors.New("invalid username or password")
 	}
 
+	if existingUser.Status != "active" && existingUser.Status != "new" {
+		return nil, errors.New("user account is not active. contact administrator")
+	}
+
 	// fmt.Println("existing user", existingUser)
 
 	err = infrastructure.CheckPasswordHash(existingUser.Password, userReq.Password)
@@ -183,6 +187,7 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		FirstName:    existingUser.Profile.FirstName,
 		MiddleName:   existingUser.Profile.MiddleName,
 		Username:     existingUser.Username,
+		Email:        existingUser.Profile.Email,
 		Role:         existingUser.Role.Name,
 		Permissions:  effectivePerms,
 		Token:        accessToken,

@@ -173,7 +173,7 @@ func (ac *userController) RefreshToken(ctx *gin.Context) {
 	}
 
 	response := model.TokenResponseDTO{
-		AccessToken:  access_token,
+		Token:        access_token,
 		RefreshToken: refresh_token,
 	}
 

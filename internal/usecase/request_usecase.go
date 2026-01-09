@@ -361,7 +361,7 @@ func (ru *requestUsecase) AuthorizeOrgRequest(ctx context.Context, authUserID pr
 	}
 
 	// Then send email (fail-safe)
-	subject := "New Foreign Currency Request"
+	subject := "Foreign Currency Request"
 	body := fmt.Sprintf("A new fcy request with request code %s has been created at %s.", forexRequest.RequestCode, now.Format("2006-01-02 15:04:05"))
 
 	go func() {
@@ -399,11 +399,11 @@ func (ru *requestUsecase) ValidateRequest(ctx context.Context, authUserID primit
 	return ru.requestRepository.Validate(ctx, request_id, forexRequest)
 }
 
-func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primitive.ObjectID, request_id primitive.ObjectID, request *model.RequestApprovalDTO) error {
+func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID, request *model.RequestApprovalDTO) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	existingRequest, err := ru.requestRepository.FindByID(ctx, request_id, false)
+	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
 		fmt.Println("the request_id doesn't exist")
 		return errors.New("the request id doesn't exist")
@@ -424,7 +424,41 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 	forexRequest.ApprovedAmounts = &request.ApprovedAmounts
 	forexRequest.RequestStatus = "Approved"
 
-	return ru.requestRepository.Update(ctx, request_id, &forexRequest)
+	// Fetch sender
+	sender, err := ru.userRepository.FindByID(ctx, authUserID)
+	if err != nil {
+		return err
+	}
+
+	err = ru.requestRepository.Update(ctx, requestID, &forexRequest)
+	if err != nil {
+		return errors.New("failed to approve the request")
+	}
+
+	to := append([]string{}, configs.MailRequestAuthorizedTo...)
+	cc := append([]string{}, configs.MailRequestAuthorizedCc...)
+	bcc := append([]string{}, configs.MailRequestAuthorizedBcc...)
+
+	if sender.Profile.Branch != nil && sender.Profile.Branch.Email != "" {
+		to = append(to, sender.Profile.Branch.Email)
+	}
+
+	if sender.Profile != nil && sender.Profile.Email != "" {
+		to = append(to, sender.Profile.Email)
+	}
+
+	// Then send email (fail-safe)
+	subject := "Foreign Currency Request"
+	body := fmt.Sprintf("A fcy request with request code %s has been approved at %s.", forexRequest.RequestCode, now.Format("2006-01-02 15:04:05"))
+
+	go func() {
+		err := utils.SendEmail(to, cc, bcc, subject, body, *existingRequest)
+		if err != nil {
+			log.Warnf("Failed to send email for request %s: %v", requestID.Hex(), err)
+		}
+	}()
+
+	return nil
 }
 
 func (ru *requestUsecase) DeleteRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error {
@@ -498,8 +532,8 @@ func (ru *requestUsecase) SendRequest(ctx context.Context, authUserID primitive.
 	}
 
 	// Then send email (fail-safe)
-	subject := "New Foreign Currency Request"
-	body := fmt.Sprintf("A new fcy request with request code %s has been created at %s.", forexRequest.RequestCode, now.Format("2006-01-02 15:04:05"))
+	subject := "Foreign Currency Request"
+	body := fmt.Sprintf("A new fcy request with request code %s has been initiated at %s.", forexRequest.RequestCode, now.Format("2006-01-02 15:04:05"))
 
 	// Send email async (fail-safe)
 	go func() {
@@ -591,7 +625,52 @@ func (ru *requestUsecase) RejectRequest(ctx context.Context, authUserID primitiv
 	forexRequest.RejectionReason = rejection_reason
 	forexRequest.RequestStatus = "Rejected"
 
-	return ru.requestRepository.Update(ctx, requestID, &forexRequest)
+	err = ru.requestRepository.Update(ctx, requestID, &forexRequest)
+	if err != nil {
+		return errors.New("failed to reject the request")
+	}
+
+	// Fetch sender
+	sender, err := ru.userRepository.FindByID(ctx, authUserID)
+	if err != nil {
+		return err
+	}
+
+	to := append([]string{}, configs.MailRequestRejectedTo...)
+	cc := append([]string{}, configs.MailRequestRejectedCc...)
+	bcc := append([]string{}, configs.MailRequestRejectedBcc...)
+
+	if sender.Profile.Branch != nil && sender.Profile.Branch.Email != "" {
+		to = append(to, sender.Profile.Branch.Email)
+	}
+
+	if sender.Profile != nil && sender.Profile.Email != "" {
+		to = append(to, sender.Profile.Email)
+	}
+
+	// Then send email (fail-safe)
+	subject := "Foreign Currency Request"
+	body := fmt.Sprintf("A new fcy request with request code %s has been rejected at %s.", forexRequest.RequestCode, now.Format("2006-01-02 15:04:05"))
+
+	// Send email async (fail-safe)
+	go func() {
+		err := utils.SendEmail(
+			to,
+			cc,
+			bcc,
+			subject,
+			body,
+			*existingRequest,
+		)
+		if err != nil {
+			log.Warnf(
+				"Failed to send email for request %s: %v",
+				requestID.Hex(),
+				err,
+			)
+		}
+	}()
+	return nil
 }
 
 func (ru *requestUsecase) LockRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error {
