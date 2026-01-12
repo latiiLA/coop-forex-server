@@ -74,12 +74,7 @@ func (uc *userController) Login(c *gin.Context) {
 
 	logEntry.WithField("username", userReq.Username).Debug("Login attempt")
 
-	clientIP, err := utils.GetIPAddress(c)
-	if err != nil {
-		logEntry.WithField("error", err.Error()).Warn("invalid ip address")
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "cannot determine client IP"})
-		return
-	}
+	clientIP := c.ClientIP()
 
 	user, err := uc.userUsecase.Login(c, userReq, clientIP)
 	if err != nil {
