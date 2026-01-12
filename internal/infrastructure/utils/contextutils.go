@@ -76,26 +76,15 @@ func GetClaimIpAddress(c *gin.Context) (any, error) {
 }
 
 func GetIPAddress(c *gin.Context) (string, error) {
-	xff := c.Request.Header.Get("X-Forwarded-For")
-	if xff != "" {
-		ips := strings.Split(xff, ",")
-		ip := strings.TrimSpace(ips[0]) // first IP is the real client
-		if ip != "" {
-			return ip, nil
-		}
-	}
-
-	// fallback to X-Real-IP
-	ip := c.Request.Header.Get("X-Real-IP")
+	ip := c.Request.Header.Get("X-Forwarded-For")
 	if ip != "" {
-		return ip, nil
+		// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+		ips := strings.Split(ip, ",")
+		return strings.TrimSpace(ips[0]), nil
 	}
-
-	// fallback to remote address
-	ip = c.ClientIP()
-	if ip != "" {
-		return ip, nil
+	ip = c.ClientIP() // fallback
+	if ip == "" {
+		return "", errors.New("IP not found")
 	}
-
-	return "", errors.New("IP not found")
+	return ip, nil
 }
