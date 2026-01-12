@@ -97,6 +97,8 @@ func main() {
 	}))
 	// Only trust localhost
 	r.SetTrustedProxies(configs.AllowedOrigins)
+	r.SetTrustedProxies([]string{"127.0.0.1"})
+	r.ForwardedByClientIP = true
 
 	// add logger middleware
 	r.Use(middleware.RequestLogger())
