@@ -422,6 +422,8 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 	forexRequest.ApprovedAt = &now
 	forexRequest.ApprovedCurrencyIDs = &request.ApprovedCurrencyIDs
 	forexRequest.ApprovedAmounts = &request.ApprovedAmounts
+	forexRequest.ApprovedAmountInCash = &request.ApprovedAmountInCash
+	forexRequest.ApprovedAmountInCard = &request.ApprovedAmountInCard
 	forexRequest.RequestStatus = "Approved"
 
 	// Fetch sender

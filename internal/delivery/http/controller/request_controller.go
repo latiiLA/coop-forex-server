@@ -1,12 +1,15 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/latiiLA/coop-forex-server/configs"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
@@ -515,12 +518,55 @@ func (rc *requestController) ApproveRequest(c *gin.Context) {
 	}
 
 	var request model.RequestApprovalDTO
+	if err := c.ShouldBind(&request); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			hasAmountError := false
 
-	err = c.ShouldBind(&request)
-	if err != nil {
-		fmt.Println("err binding", err)
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+			for _, fe := range ve {
+				if fe.Tag() == "gt" &&
+					(strings.HasPrefix(fe.Field(), "ApprovedAmounts") ||
+						strings.HasPrefix(fe.Field(), "ApprovedAmountInCash") ||
+						strings.HasPrefix(fe.Field(), "ApprovedAmountInCard")) {
+					hasAmountError = true
+					break
+				}
+			}
+
+			if hasAmountError {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": "Approved amount must be greater than 0",
+				})
+				return
+			}
+
+			// fallback for other validation errors
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Validation failed",
+			})
+			return
+		}
+
+		// fallback for non-validator errors
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
 		return
+
+	}
+
+	for i := range request.ApprovedAmounts {
+		cash := request.ApprovedAmountInCash[i]
+		card := request.ApprovedAmountInCard[i]
+		total := cash + card
+
+		if total != request.ApprovedAmounts[i] {
+			c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: fmt.Sprintf(
+				"Approved amount at index %d must equal to cash + card (%.2f + %.2f = %.2f)",
+				i, cash, card, total,
+			)})
+			return
+		}
 	}
 
 	// get user id from param
