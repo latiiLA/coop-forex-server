@@ -59,10 +59,12 @@ type Request struct {
 	ValidatedCurrentBalance    *float64            `json:"validated_current_balance,omitempty" bson:"validated_current_balance,omitempty"`
 
 	// Approved Fields
-	ApprovedCurrencyIDs *[]primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
-	ApprovedCurrencies  *[]Currency           `json:"approved_currencies,omitempty" bson:"approved_currencies,omitempty"`
-	ApprovedAmounts     *[]float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
-	AcceptanceStatus    *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
+	ApprovedCurrencyIDs  *[]primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
+	ApprovedCurrencies   *[]Currency           `json:"approved_currencies,omitempty" bson:"approved_currencies,omitempty"`
+	ApprovedAmounts      *[]float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
+	ApprovedAmountInCash *[]float64            `json:"approved_amount_in_cash,omitempty" bson:"approved_amount_in_cash,omitempty"`
+	ApprovedAmountInCard *[]float64            `json:"approved_amount_in_card,omitempty" bson:"approved_amount_in_card,omitempty"`
+	AcceptanceStatus     *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
 
 	// Status & remarks
 	RequestStatus   string     `json:"request_status" bson:"request_status"`
@@ -72,16 +74,15 @@ type Request struct {
 	DueDate         *time.Time `json:"due_date,omitempty" bson:"due_date,omitempty"`
 
 	// Audit
-	CreatedAt        time.Time  `json:"created_at" bson:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at" bson:"updated_at"`
-	RequestedAt      *time.Time `json:"requested_at,omitempty" bson:"requested_at,omitempty"`
-	AuthorizedAt     *time.Time `json:"authorized_at,omitempty" bson:"authorized_at,omitempty"`
-	RejectedAt       *time.Time `json:"rejected_at,omitempty" bson:"rejected_at,omitempty"`
-	ValidatedAt      *time.Time `json:"validated_at,omitempty" bson:"validated_at,omitempty"`
-	ApprovedAt       *time.Time `json:"approved_at,omitempty" bson:"approved_at,omitempty"`
-	AcceptedAt       *time.Time `json:"accepted_at,omitempty" bson:"accepted_at,omitempty"`
-	DeclinedAt       *time.Time `json:"declined_at,omitempty" bson:"declined_at,omitempty"`
-	SystemDeclinedAt *time.Time `json:"system_declined_at,omitempty" bson:"system_declined_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at" bson:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" bson:"updated_at"`
+	RequestedAt  *time.Time `json:"requested_at,omitempty" bson:"requested_at,omitempty"`
+	AuthorizedAt *time.Time `json:"authorized_at,omitempty" bson:"authorized_at,omitempty"`
+	RejectedAt   *time.Time `json:"rejected_at,omitempty" bson:"rejected_at,omitempty"`
+	ValidatedAt  *time.Time `json:"validated_at,omitempty" bson:"validated_at,omitempty"`
+	ApprovedAt   *time.Time `json:"approved_at,omitempty" bson:"approved_at,omitempty"`
+	AcceptedAt   *time.Time `json:"accepted_at,omitempty" bson:"accepted_at,omitempty"`
+	DeclinedAt   *time.Time `json:"declined_at,omitempty" bson:"declined_at,omitempty"`
 
 	CreatedBy    primitive.ObjectID  `json:"created_by" bson:"created_by"`
 	Creator      *User               `json:"creator,omitempty" bson:"creator,omitempty"`
@@ -145,9 +146,11 @@ type RequestUpdate struct {
 	ValidatedCurrentBalance    *float64            `json:"validated_current_balance,omitempty" bson:"validated_current_balance,omitempty"`
 
 	// Approved Fields
-	ApprovedCurrencyIDs *[]primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
-	ApprovedAmounts     *[]float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
-	AcceptanceStatus    *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
+	ApprovedCurrencyIDs  *[]primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
+	ApprovedAmounts      *[]float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
+	ApprovedAmountInCash *[]float64            `json:"approved_amount_in_cash,omitempty" bson:"approved_amount_in_cash,omitempty"`
+	ApprovedAmountInCard *[]float64            `json:"approved_amount_in_card,omitempty" bson:"approved_amount_in_card,omitempty"`
+	AcceptanceStatus     *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
 
 	// Status & remarks
 	RequestStatus   string     `json:"request_status" bson:"request_status"`
@@ -247,8 +250,10 @@ type RequestValidationDTO struct {
 }
 
 type RequestApprovalDTO struct {
-	ApprovedCurrencyIDs []primitive.ObjectID `json:"approved_currency_ids" binding:"required"`
-	ApprovedAmounts     []float64            `json:"approved_amounts" binding:"gte=0"`
+	ApprovedCurrencyIDs  []primitive.ObjectID `json:"approved_currency_ids" binding:"required"`
+	ApprovedAmounts      []float64            `json:"approved_amounts" binding:"required,dive,gt=0"`
+	ApprovedAmountInCash []float64            `json:"approved_amount_in_cash" binding:"required,dive,gt=0"`
+	ApprovedAmountInCard []float64            `json:"approved_amount_in_card" binding:"required,dive,gt=0"`
 }
 
 // Internal model with ObjectIDs
