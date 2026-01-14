@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type RoleUsecase interface {
-	AddRole(ctx context.Context, authUserID primitive.ObjectID, role *model.Role) error
+	AddRole(ctx context.Context, authUserID primitive.ObjectID, role *model.CreateRoleDTO) error
 	GetRoleByID(ctx context.Context, roleID primitive.ObjectID) (*model.Role, error)
 	GetAllRoles(ctx context.Context) ([]model.Role, error)
 	UpdateRole(ctx context.Context, authUserID primitive.ObjectID, roleID primitive.ObjectID, role model.UpdateRoleDTO) error
@@ -32,7 +33,7 @@ func NewRoleUsecase(roleRepository model.RoleRepository, timeout time.Duration) 
 	}
 }
 
-func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectID, role *model.Role) error {
+func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectID, role *model.CreateRoleDTO) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
@@ -48,13 +49,20 @@ func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectI
 		return errors.New("role already exists")
 	}
 
-	role.ID = primitive.NewObjectID()
-	role.CreatedAt = time.Now()
-	role.UpdatedAt = time.Now()
-	role.CreatedBy = authUserID
-	role.IsDeleted = false
+	createdRole := model.Role{}
+	now := time.Now()
 
-	return ru.roleRepository.Create(ctx, role)
+	createdRole.ID = primitive.NewObjectID()
+	createdRole.Name = role.Name
+	createdRole.Permissions = role.Permissions
+	createdRole.CreatedAt = now
+	createdRole.UpdatedAt = now
+	createdRole.CreatedBy = authUserID
+	createdRole.IsDeleted = false
+
+	logrus.WithField("role", createdRole).Info("role created successfully")
+
+	return ru.roleRepository.Create(ctx, &createdRole)
 }
 
 func (ru *roleUsecase) GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (*model.Role, error) {
