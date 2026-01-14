@@ -4,18 +4,18 @@
     "validator": {
       "$jsonSchema": {
         "bsonType": "object",
-        "required": ["first_name", "middle_name", "last_name", "birthday", "short_bio", "gender", "phone", "email", "department_id", "branch_id", "created_at", "updated_at"],
+        "required": ["first_name", "middle_name", "last_name", "email", "created_at", "updated_at"],
         "properties": {
           "first_name": { "bsonType": "string" },
           "middle_name": { "bsonType": "string" },
           "last_name": { "bsonType": "string" },
-          "birthday": { "bsonType": ["date", "null"] },
-          "short_bio": { "bsonType": ["string", "null"] },
-          "gender": { "bsonType": ["string", "null"] },
-          "phone": { "bsonType": ["string", "null"] },
-          "email": { "bsonType": ["string", "null"] },
-          "department_id": { "bsonType": ["objectId", "null"] },
-          "branch_id": { "bsonType": ["objectId", "null"] },
+          "birthday": { "bsonType": ["date"] },
+          "short_bio": { "bsonType": ["string"] },
+          "gender": { "bsonType": ["string"] },
+          "phone": { "bsonType": ["string"] },
+          "email": { "bsonType": ["string"] },
+          "department_id": { "bsonType": ["objectId"] },
+          "branch_id": { "bsonType": ["objectId"] },
           "created_at": { "bsonType": "date" },
           "updated_at": { "bsonType": "date" }
         }

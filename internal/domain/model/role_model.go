@@ -22,6 +22,11 @@ type Role struct {
 	IsDeleted   bool                `json:"is_deleted" bson:"is_deleted"`
 }
 
+type CreateRoleDTO struct {
+	Name        string   `json:"name" binding:"required,min=3"`
+	Permissions []string `json:"permissions" binding:"required,min=1"`
+}
+
 type UpdateRoleDTO struct {
 	Name        string   `json:"name" binding:"required,min=3"`
 	Permissions []string `json:"permissions" binding:"required,min=1"`

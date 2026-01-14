@@ -9,9 +9,6 @@
         "created_at": { "$date": { "$numberLong": "1734912000000" } },
         "updated_at": { "$date": { "$numberLong": "1734912000000" } },
         "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
-        "updated_by": null,
-        "deleted_by": null,
-        "deleted_at": null,
         "is_deleted": false
       }
     ]

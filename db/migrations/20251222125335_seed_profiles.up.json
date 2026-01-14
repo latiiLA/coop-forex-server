@@ -8,16 +8,9 @@
         "first_name": "Super",
         "middle_name": "Admin",
         "last_name": "User",
-        "department_id": null,
-        "branch_id": null,
-        "birthday": null,
-        "gender": null,
-        "phone": null,
-        "short_bio": null,
         "created_at": { "$date": { "$numberLong": "1757030400000" } },
         "updated_at": { "$date": { "$numberLong": "1757030400000" } },
-        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" },
-        "updated_by": null
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679000" }
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345689001" },
@@ -25,16 +18,10 @@
         "first_name": "Branch",
         "middle_name": "Test",
         "last_name": "User",
-        "department_id": null,
         "branch_id": { "$oid": "67759ef11f385c7cd712cd68" },
-        "birthday": null,
-        "gender": null,
-        "phone": null,
-        "short_bio": null,
         "created_at": { "$date": { "$numberLong": "1757030400000" } },
         "updated_at": { "$date": { "$numberLong": "1757030400000" } },
-        "created_by": { "$oid": "66a7b8c9e4b0f12345679001" },
-        "updated_by": null
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679001" }
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345689002" },
@@ -42,16 +29,10 @@
         "first_name": "Branch",
         "middle_name": "Test",
         "last_name": "Authorizer",
-        "department_id": null,
         "branch_id": { "$oid": "67759ef11f385c7cd712cd68" },
-        "birthday": null,
-        "gender": null,
-        "phone": null,
-        "short_bio": null,
         "created_at": { "$date": { "$numberLong": "1757030400000" } },
         "updated_at": { "$date": { "$numberLong": "1757030400000" } },
-        "created_by": { "$oid": "66a7b8c9e4b0f12345679002" },
-        "updated_by": null
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679002" }
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345689003" },
@@ -59,16 +40,10 @@
         "first_name": "Branch",
         "middle_name": "Processor",
         "last_name": "User",
-        "department_id": null,
         "branch_id": { "$oid": "67759ef11f385c7cd712ce44" },
-        "birthday": null,
-        "gender": null,
-        "phone": null,
-        "short_bio": null,
         "created_at": { "$date": { "$numberLong": "1757030400000" } },
         "updated_at": { "$date": { "$numberLong": "1757030400000" } },
-        "created_by": { "$oid": "66a7b8c9e4b0f12345679003" },
-        "updated_by": null
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679003" }
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345689004" },
@@ -76,16 +51,10 @@
         "first_name": "Branch",
         "middle_name": "Processor",
         "last_name": "Authorizer",
-        "department_id": null,
         "branch_id": { "$oid": "67759ef11f385c7cd712ce44" },
-        "birthday": null,
-        "gender": null,
-        "phone": null,
-        "short_bio": null,
         "created_at": { "$date": { "$numberLong": "1757030400000" } },
         "updated_at": { "$date": { "$numberLong": "1757030400000" } },
-        "created_by": { "$oid": "66a7b8c9e4b0f12345679004" },
-        "updated_by": null
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679004" }
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345689005" },
@@ -94,15 +63,9 @@
         "middle_name": "Test",
         "last_name": "User",
         "department_id": { "$oid": "676e44274d7cd2c7251d66d2" },
-        "branch_id": null,
-        "birthday": null,
-        "gender": null,
-        "phone": null,
-        "short_bio": null,
         "created_at": { "$date": { "$numberLong": "1757030400000" } },
         "updated_at": { "$date": { "$numberLong": "1757030400000" } },
-        "created_by": { "$oid": "66a7b8c9e4b0f12345679005" },
-        "updated_by": null
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679005" }
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345689006" },
@@ -111,15 +74,20 @@
         "middle_name": "Test",
         "last_name": "Approver",
         "department_id": { "$oid": "676e44274d7cd2c7251d66d2" },
-        "branch_id": null,
-        "birthday": null,
-        "gender": null,
-        "phone": null,
-        "short_bio": null,
         "created_at": { "$date": { "$numberLong": "1757030400000" } },
         "updated_at": { "$date": { "$numberLong": "1757030400000" } },
-        "created_by": { "$oid": "66a7b8c9e4b0f12345679006" },
-        "updated_by": null
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679006" }
+      },
+      {
+        "_id": { "$oid": "66a7b8c9e4b0f12345689007" },
+        "email": "forexadmin@coopbankoromiasc.com",
+        "first_name": "Forex",
+        "middle_name": "Test",
+        "last_name": "Admin",
+        "department_id": { "$oid": "676e44274d7cd2c7251d66d2" },
+        "created_at": { "$date": { "$numberLong": "1757030400000" } },
+        "updated_at": { "$date": { "$numberLong": "1757030400000" } },
+        "created_by": { "$oid": "66a7b8c9e4b0f12345679006" }
       }
     ]
   }

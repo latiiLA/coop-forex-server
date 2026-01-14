@@ -37,7 +37,7 @@ func (rc *roleController) AddRole(c *gin.Context) {
 		return
 	}
 
-	var role model.Role
+	var role model.CreateRoleDTO
 
 	err = c.ShouldBindJSON(&role)
 	if err != nil {
