@@ -509,6 +509,14 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Request updated successfully"})
 }
 
+// helper function for approve request
+func getAmount(slice []float64, index int) float64 {
+	if index < len(slice) {
+		return slice[index]
+	}
+	return 0
+}
+
 func (rc *requestController) ApproveRequest(c *gin.Context) {
 	userID, err := utils.GetUserID(c)
 	if err != nil {
@@ -556,15 +564,26 @@ func (rc *requestController) ApproveRequest(c *gin.Context) {
 	}
 
 	for i := range request.ApprovedAmounts {
-		cash := request.ApprovedAmountInCash[i]
-		card := request.ApprovedAmountInCard[i]
+		cash := 0.0
+		card := 0.0
+
+		if i < len(request.ApprovedAmountInCash) {
+			cash = request.ApprovedAmountInCash[i]
+		}
+
+		if i < len(request.ApprovedAmountInCard) {
+			card = request.ApprovedAmountInCard[i]
+		}
+
 		total := cash + card
 
 		if total != request.ApprovedAmounts[i] {
-			c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: fmt.Sprintf(
-				"Approved amount at index %d must equal to cash + card (%.2f + %.2f = %.2f)",
-				i, cash, card, total,
-			)})
+			c.JSON(http.StatusBadRequest, response.ErrorResponse{
+				Message: fmt.Sprintf(
+					"Approved amount at index %d must equal cash + card (%.2f + %.2f = %.2f)",
+					i, cash, card, total,
+				),
+			})
 			return
 		}
 	}
