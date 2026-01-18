@@ -51,13 +51,14 @@ func (a *authController) Login(c *gin.Context) {
 	}).Info("Login attempt")
 
 	// Call the usecase to perform authentication
-	if err := a.usecase.Authenticate(req.Username, req.Password); err != nil {
+	user, err := a.usecase.Authenticate(c, req.Username, req.Password, c.ClientIP())
+	if err != nil {
 		log.WithFields(log.Fields{
 			"trace_id": traceID,
 			"username": req.Username,
 			"ip":       clientIP,
 		}).Warn("Login failed")
-		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: "invalid credential or internal server error"})
 		return
 	}
 
@@ -67,5 +68,5 @@ func (a *authController) Login(c *gin.Context) {
 		"ip":       clientIP,
 	}).Info("Login successful")
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Login Successful"})
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Login Successful", Data: user})
 }
