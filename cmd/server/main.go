@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"io"
 	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	configs "github.com/latiiLA/coop-forex-server/configs"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/router"
@@ -27,15 +27,15 @@ func setupLogger() {
 		}
 	}
 
-	// Open log file
-	file, err := os.OpenFile("logs/server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatal("❌ Could not open log file:", err)
-	}
+	// Lumberjack handles rotation
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   "logs/server.log",
+		MaxSize:    100,
+		MaxBackups: 100,
+		MaxAge:     100,
+		Compress:   true,
+	})
 
-	// Output to both file and stdout
-	multiWriter := io.MultiWriter(file, os.Stdout)
-	log.SetOutput(multiWriter)
 	log.SetFormatter(&log.JSONFormatter{})
 	logLevel, err := log.ParseLevel(configs.LogLevel)
 	if err != nil {
