@@ -6,21 +6,25 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
+	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"github.com/latiiLA/coop-forex-server/internal/usecase"
 	log "github.com/sirupsen/logrus"
 )
 
 type AuthController interface {
 	Login(c *gin.Context)
+	Register(c *gin.Context)
 }
 
 type authController struct {
-	usecase usecase.AuthUsecase
+	authUsecase usecase.AuthUsecase
+	userUsecase usecase.UserUsecase
 }
 
-func NewAuthController(u usecase.AuthUsecase) AuthController {
+func NewAuthController(u usecase.AuthUsecase, ldap usecase.UserUsecase) AuthController {
 	return &authController{
-		usecase: u,
+		authUsecase: u,
+		userUsecase: ldap,
 	}
 }
 
@@ -51,7 +55,7 @@ func (a *authController) Login(c *gin.Context) {
 	}).Info("Login attempt")
 
 	// Call the usecase to perform authentication
-	user, err := a.usecase.Authenticate(c, req.Username, req.Password, c.ClientIP())
+	user, err := a.authUsecase.Authenticate(c, req.Username, req.Password, c.ClientIP())
 	if err != nil {
 		log.WithFields(log.Fields{
 			"trace_id": traceID,
@@ -69,4 +73,39 @@ func (a *authController) Login(c *gin.Context) {
 	}).Info("Login successful")
 
 	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Login Successful", Data: user})
+}
+
+func (a *authController) Register(c *gin.Context) {
+	logEntry := utils.GetLogger(c)
+	authUserID, _ := utils.GetUserID(c)
+
+	var registerReq model.RegisterRequestDTO
+	if err := c.ShouldBindJSON(&registerReq); err != nil {
+		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	// --- STEP 1: Call AuthUsecase (LDAP) ---
+	// We get the official data from Active Directory
+	adUser, err := a.authUsecase.GetUserDetails(c.Request.Context(), registerReq.Username)
+	if err != nil {
+		logEntry.Warn("User not found in AD")
+		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: "User must exist in AD"})
+		return
+	}
+
+	// Overwrite incoming request with official AD data
+	registerReq.FirstName = adUser.Profile.FirstName
+	registerReq.LastName = adUser.Profile.LastName
+	registerReq.Email = adUser.Profile.Email
+
+	// --- STEP 2: Call UserUsecase (MongoDB) ---
+	// We pass the "enriched" request to your working MongoDB usecase
+	err = a.userUsecase.Register(c.Request.Context(), authUserID, &registerReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.SuccessResponse{Message: "User registered successfully"})
 }

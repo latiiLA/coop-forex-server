@@ -17,6 +17,8 @@ import (
 
 type AuthUsecase interface {
 	Authenticate(ctx context.Context, username, password, ip string) (*model.LoginResponseDTO, error)
+	GetUserDetails(ctx context.Context, username string) (*model.User, error)
+	Register(ctx context.Context, username string) (*model.User, error)
 }
 
 type ldapAuthUsecase struct {
@@ -166,4 +168,57 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	}
 
 	return &response, nil
+}
+
+// Inside your LDAP service
+func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (*model.User, error) {
+	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s:%s", s.Host, s.Port))
+	if err != nil {
+		return nil, err
+	}
+	defer l.Close()
+
+	// Bind with Service Account
+	err = l.Bind(s.BindUser, s.BindPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	// Search for the user
+	searchRequest := ldap.NewSearchRequest(
+		s.BasedDN,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		fmt.Sprintf("(%s=%s)", s.UserFilter, username), // Use sAMAccountName for real AD
+		[]string{"dn", "givenName", "sn", "mail"},
+		nil,
+	)
+
+	sr, err := l.Search(searchRequest)
+	if err != nil || len(sr.Entries) == 0 {
+		return nil, errors.New("user not found")
+	}
+
+	entry := sr.Entries[0]
+	profile := model.Profile{
+		FirstName: entry.GetAttributeValue("givenName"),
+		LastName:  entry.GetAttributeValue("sn"),
+		Email:     entry.GetAttributeValue("mail"),
+	}
+	return &model.User{
+		Profile: &profile,
+	}, nil
+}
+
+func (s *ldapAuthUsecase) Register(ctx context.Context, username string) (*model.User, error) {
+	// 1. Get official details from LDAP/AD
+	// We use the method we already wrote
+	adUser, err := s.GetUserDetails(ctx, username)
+	if err != nil {
+		logrus.WithField("username", username).Warn("User not found in AD")
+		return nil, fmt.Errorf("user does not exist in Active Directory")
+	}
+
+	// 2. Return the User model populated with AD data
+	// This will be used by the controller to fill the RegisterRequestDTO
+	return adUser, nil
 }
