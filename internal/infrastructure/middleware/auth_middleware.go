@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -74,7 +73,6 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 			return
 		}
 
-		fmt.Print("required permissions", requiredPermission)
 		role, ok := roleValue.(string)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Invalid role format"})

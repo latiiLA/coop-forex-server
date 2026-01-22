@@ -95,8 +95,8 @@ func main() {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Content-Disposition"},
 		AllowCredentials: true,
 	}))
+
 	// Only trust localhost
-	r.SetTrustedProxies(configs.AllowedOrigins)
 	r.SetTrustedProxies([]string{"127.0.0.1"})
 	r.ForwardedByClientIP = true
 
