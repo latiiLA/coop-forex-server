@@ -23,13 +23,13 @@ type Role struct {
 }
 
 type CreateRoleDTO struct {
-	Name        string   `json:"name" binding:"required,min=3"`
-	Permissions []string `json:"permissions" binding:"required,min=1"`
+	Name        string   `json:"name" binding:"required,min=3,max=50,alphanum"`
+	Permissions []string `json:"permissions" binding:"required,min=1,dive,required"`
 }
 
 type UpdateRoleDTO struct {
-	Name        string   `json:"name" binding:"required,min=3"`
-	Permissions []string `json:"permissions" binding:"required,min=1"`
+	Name        string   `json:"name" binding:"required,min=3,max=50,alphanum"`
+	Permissions []string `json:"permissions" binding:"required,min=1,dive,required"`
 }
 
 type RoleRepository interface {

@@ -24,8 +24,8 @@ func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.Route
 
 	//  middleware.JwtAuthMiddleware(configs.JwtSecret)
 
-	// group.POST("/login", userController.Login)
-	// group.POST("/register", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{""}, []string{"user:add"}), userController.Register)
+	group.POST("/login", userController.Login)
+	group.POST("/register", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{""}, []string{"user:add"}), userController.Register)
 	group.GET("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{"superadmin"}, []string{"user:view"}), userController.GetAllUsers)
 	group.PUT("/users/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{"admin"}, []string{"user:update"}), userController.UpdateUser)
 	group.GET("/ip", middleware.JwtAuthMiddleware(configs.JwtSecret), userController.IP)
@@ -35,8 +35,8 @@ func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.Route
 
 	// LDAP configuration
 
-	authUsecase := usecase.NewLDAPAuthUsecase(userRepo, configs.LDAPHost, configs.LDAPPort, configs.LDAPBaseDN, configs.LDAPBindUser, configs.LDAPBindPassword, "uid", timeout)
-	authController := controller.NewAuthController(authUsecase, userUsecase)
-	group.POST("/login", authController.Login)
-	group.POST("/register", authController.Register)
+	// authUsecase := usecase.NewLDAPAuthUsecase(userRepo, configs.LDAPHost, configs.LDAPPort, configs.LDAPBaseDN, configs.LDAPBindUser, configs.LDAPBindPassword, "sAMAccountName", timeout) // "uid" for testing using docker test setup - for correct AD setup sAMAccountName
+	// authController := controller.NewAuthController(authUsecase, userUsecase)
+	// group.POST("/login", authController.Login)
+	// group.POST("/register", authController.Register)
 }

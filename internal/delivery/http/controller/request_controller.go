@@ -323,7 +323,7 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 		return
 	}
 
-	var request model.RequestDTO
+	var request model.UpdateRequestDTO
 
 	err = c.ShouldBind(&request)
 	if err != nil {
