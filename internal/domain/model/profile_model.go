@@ -12,6 +12,7 @@ type Profile struct {
 	FirstName    string              `json:"first_name" bson:"first_name"`
 	MiddleName   string              `json:"middle_name" bson:"middle_name"`
 	LastName     string              `json:"last_name" bson:"last_name"`
+	DisplayName  string              `json:"display_name" bson:"display_name"`
 	Birthday     *time.Time          `json:"birthday,omitempty" bson:"birthday,omitempty"`
 	ShortBio     *string             `json:"short_bio,omitempty" bson:"short_bio,omitempty"`
 	Gender       *string             `json:"gender,omitempty" bson:"gender,omitempty"`
