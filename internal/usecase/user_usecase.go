@@ -16,7 +16,7 @@ import (
 )
 
 type UserUsecase interface {
-	Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterRequestDTO) error
+	Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterUsecaseRequestDTO) error
 	Login(c context.Context, userReq model.LoginRequestDTO, ip string) (*model.LoginResponseDTO, error)
 	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.User, error)
 	UpdateUserByID(c context.Context, userID primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateUserRequestDTO) (*model.UserResponseDTO, error)
@@ -44,7 +44,7 @@ func NewUserUsecase(userRepository model.UserRepository, roleRepository model.Ro
 	}
 }
 
-func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterRequestDTO) error {
+func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterUsecaseRequestDTO) error {
 	ctx, cancel := context.WithTimeout(c, uc.contextTimeout)
 	defer cancel()
 
@@ -57,14 +57,9 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 		return errors.New("username already exists")
 	}
 
-	if _, err := uc.profileRepository.FindByEmail(ctx, registerReq.Email); err == nil {
-		return errors.New("email already exists")
-	}
-
-	encriptedPassword, err := infrastructure.HashPassword(registerReq.Password)
-	if err != nil {
-		return err
-	}
+	// if _, err := uc.profileRepository.FindByEmail(ctx, registerReq.Email); err == nil {
+	// 	return errors.New("email already exists")
+	// }
 
 	// start MongoDB session
 	session, err := uc.client.StartSession()
@@ -85,6 +80,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 			FirstName:    registerReq.FirstName,
 			MiddleName:   registerReq.MiddleName,
 			LastName:     registerReq.LastName,
+			DisplayName:  registerReq.DisplayName,
 			Email:        registerReq.Email,
 			DepartmentID: registerReq.DepartmentID,
 			BranchID:     registerReq.BranchID,
@@ -92,7 +88,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 			UpdatedAt:    time.Now(),
 		}
 
-		err = uc.profileRepository.Create(ctx, profile)
+		err = uc.profileRepository.Create(sessCtx, profile)
 		if err != nil {
 			session.AbortTransaction(sessCtx)
 			return err
@@ -103,8 +99,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 			ProfileID: profile.ID,
 			RoleID:    registerReq.Role,
 			Username:  registerReq.Username,
-			Password:  string(encriptedPassword),
-			Status:    "New",
+			Status:    "new",
 			CreatedBy: authUserID,
 			IsDeleted: false,
 			CreatedAt: time.Now(),
@@ -174,7 +169,7 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		return nil, err
 	}
 
-	// // Update last login
+	// Update last login
 	// var now = time.Now()
 	// existingUser.LastLogin = &now
 
@@ -245,16 +240,16 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 		if user.LastName != "" {
 			existingProfile.LastName = user.LastName
 		}
-		if user.Email != "" {
-			existingProfileByEmail, err := uc.profileRepository.FindByEmail(sessCtx, user.Email)
-			if err != nil && err != mongo.ErrNoDocuments {
-				return err
-			}
-			if existingProfileByEmail != nil && existingProfileByEmail.ID != user_id {
-				return errors.New("email already exists")
-			}
-			existingProfile.Email = user.Email
-		}
+		// if user.Email != "" {
+		// 	existingProfileByEmail, err := uc.profileRepository.FindByEmail(sessCtx, user.Email)
+		// 	if err != nil && err != mongo.ErrNoDocuments {
+		// 		return err
+		// 	}
+		// 	if existingProfileByEmail != nil && existingProfileByEmail.ID != user_id {
+		// 		return errors.New("email already exists")
+		// 	}
+		// 	existingProfile.Email = user.Email
+		// }
 		if user.BranchID != &primitive.NilObjectID {
 			existingProfile.DepartmentID = nil
 			existingProfile.BranchID = user.BranchID
