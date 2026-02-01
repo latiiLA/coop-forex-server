@@ -15,7 +15,7 @@ type User struct {
 	ProfileID   primitive.ObjectID  `json:"profile_id" bson:"profile_id"`
 	Profile     *Profile            `json:"profile,omitempty" bson:"profile,omitempty"`
 	Username    string              `json:"username" bson:"username"`
-	Password    string              `json:"-" bson:"password"`
+	Password    string              `json:"-" bson:"password,omitempty"`
 	Status      string              `json:"status" bson:"status"`
 	LastLogin   *time.Time          `json:"last_login,omitempty" bson:"last_login,omitempty"`
 	CreatedAt   time.Time           `json:"created_at" bson:"created_at"`
@@ -31,14 +31,26 @@ type User struct {
 
 type RegisterRequestDTO struct {
 	Username     string              `json:"username" binding:"required,min=3"`
-	Password     string              `json:"password" binding:"required,alphanum,min=6"`
+	Password     string              `json:"password" binding:"omitempty,alphanum,min=6"`
 	FirstName    string              `json:"first_name" binding:"required,min=3"`
 	MiddleName   string              `json:"middle_name" binding:"required,min=3"`
 	LastName     string              `json:"last_name" binding:"required,min=3"`
-	Email        string              `json:"email" binding:"email"`
 	Role         primitive.ObjectID  `json:"role" binding:"required"`
-	DepartmentID *primitive.ObjectID `json:"department_id"`
-	BranchID     *primitive.ObjectID `json:"branch_id"`
+	DepartmentID *primitive.ObjectID `json:"department"`
+	BranchID     *primitive.ObjectID `json:"branch"`
+}
+
+type RegisterUsecaseRequestDTO struct {
+	Username     string
+	Password     string
+	FirstName    string
+	MiddleName   string
+	DisplayName  string
+	LastName     string
+	Role         primitive.ObjectID
+	Email        string
+	DepartmentID *primitive.ObjectID
+	BranchID     *primitive.ObjectID
 }
 
 type UpdateUserRequestDTO struct {
@@ -47,7 +59,6 @@ type UpdateUserRequestDTO struct {
 	FirstName    string              `json:"first_name" binding:"omitempty,min=3"`
 	MiddleName   string              `json:"middle_name" binding:"omitempty,min=3"`
 	LastName     string              `json:"last_name" binding:"omitempty,min=3"`
-	Email        string              `json:"email" binding:"omitempty"`
 	Role         primitive.ObjectID  `json:"role" binding:"omitempty"`
 	DepartmentID *primitive.ObjectID `json:"department_id" binding:"omitempty"`
 	BranchID     *primitive.ObjectID `json:"branch_id" binding:"omitempty"`
