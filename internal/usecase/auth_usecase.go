@@ -18,7 +18,6 @@ import (
 type AuthUsecase interface {
 	Authenticate(ctx context.Context, username, password, ip string) (*model.LoginResponseDTO, error)
 	GetUserDetails(ctx context.Context, username string) (*model.User, error)
-	Register(ctx context.Context, username string) (*model.User, error)
 }
 
 type ldapAuthUsecase struct {
@@ -61,19 +60,12 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 		return nil, errors.New("user access has been revoced or user is deleted")
 	}
 
-	// Step 2 - check ldap authentications
-	log.Printf("DEBUG: LDAP Host = %s, Port = %s\n", s.Host, s.Port)
-	log.Printf("DEBUG: Dialing URL = ldap://%s:%s\n", s.Host, s.Port)
-
 	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s", s.Host))
 	if err != nil {
-		log.Println("Connection failed")
+		log.Println("LDAP: Connection failed")
 		return nil, fmt.Errorf("failed to connect to LDAP: %w", err)
 	}
 	defer l.Close()
-	log.Println("Connection successful")
-
-	log.Println(s.BindUser, s.BindPassword)
 
 	// Step 2.1: Search for user DN
 	searchRequest := ldap.NewSearchRequest(
@@ -84,15 +76,13 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 		nil,
 	)
 
-	fmt.Println("search request", searchRequest)
-
 	// Step 2.2: Bind with service account
 	err = l.Bind(s.BindUser, s.BindPassword)
 	if err != nil {
 		log.Println(fmt.Errorf("bind failed: %w", err))
 		return nil, fmt.Errorf("bind failed: %w", err)
 	}
-	log.Println("DEBUG: Initial bind successful")
+	log.Println("LDAP: Initial bind successful")
 
 	sr, err := l.Search(searchRequest)
 	if err != nil {
@@ -105,7 +95,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	}
 
 	userDN := sr.Entries[0].DN
-	log.Printf("DEBUG: Found user DN = %s\n", userDN)
+	log.Printf("LDAP: Found user DN = %s\n", userDN)
 
 	// Step 2.3: Try binding as the user with the provided password
 	err = l.Bind(userDN, password)
@@ -189,7 +179,8 @@ func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (
 		s.BasedDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf("(%s=%s)", s.UserFilter, username), // Use sAMAccountName for real AD
-		[]string{"dn", "givenName", "sn", "mail"},
+		[]string{"dn", "givenName", "name", "sn", "mail", "userAccountControl"},
+		// []string{"*"}, // used for debug to fetch all the data
 		nil,
 	)
 
@@ -199,26 +190,24 @@ func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (
 	}
 
 	entry := sr.Entries[0]
+	// log.Println("===== LDAP ATTRIBUTES DUMP =====")
+
+	// for _, attr := range entry.Attributes {
+	// 	log.Printf("Attribute: %s\n", attr.Name)
+	// 	for i, val := range attr.Values {
+	// 		log.Printf("   Value[%d]: %s\n", i, val)
+	// 	}
+	// }
+
+	// log.Println("================================")
+
 	profile := model.Profile{
-		FirstName: entry.GetAttributeValue("givenName"),
-		LastName:  entry.GetAttributeValue("sn"),
-		Email:     entry.GetAttributeValue("mail"),
+		DisplayName: entry.GetAttributeValue("name"),
+		FirstName:   entry.GetAttributeValue("givenName"),
+		MiddleName:  entry.GetAttributeValue("sn"),
+		Email:       entry.GetAttributeValue("mail"),
 	}
 	return &model.User{
 		Profile: &profile,
 	}, nil
-}
-
-func (s *ldapAuthUsecase) Register(ctx context.Context, username string) (*model.User, error) {
-	// 1. Get official details from LDAP/AD
-	// We use the method we already wrote
-	adUser, err := s.GetUserDetails(ctx, username)
-	if err != nil {
-		logrus.WithField("username", username).Warn("User not found in AD")
-		return nil, fmt.Errorf("user does not exist in Active Directory")
-	}
-
-	// 2. Return the User model populated with AD data
-	// This will be used by the controller to fill the RegisterRequestDTO
-	return adUser, nil
 }
