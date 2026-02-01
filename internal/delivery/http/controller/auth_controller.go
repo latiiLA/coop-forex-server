@@ -61,6 +61,7 @@ func (a *authController) Login(c *gin.Context) {
 			"trace_id": traceID,
 			"username": req.Username,
 			"ip":       clientIP,
+			"error":    err.Error(),
 		}).Warn("Login failed")
 		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: "invalid credential or internal server error"})
 		return
@@ -89,19 +90,25 @@ func (a *authController) Register(c *gin.Context) {
 	// We get the official data from Active Directory
 	adUser, err := a.authUsecase.GetUserDetails(c.Request.Context(), registerReq.Username)
 	if err != nil {
-		logEntry.Warn("User not found in AD")
+		logEntry.Warn("Get user detail from AD error: ", err)
 		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: "User must exist in AD"})
 		return
 	}
 
-	// Overwrite incoming request with official AD data
-	registerReq.FirstName = adUser.Profile.FirstName
-	registerReq.LastName = adUser.Profile.LastName
-	registerReq.Email = adUser.Profile.Email
+	RegisterUsecaseReq := model.RegisterUsecaseRequestDTO{
+		Username:     registerReq.Username,
+		FirstName:    adUser.Profile.FirstName,
+		MiddleName:   adUser.Profile.MiddleName,
+		LastName:     registerReq.LastName,
+		DisplayName:  adUser.Profile.DisplayName,
+		Email:        adUser.Profile.Email,
+		BranchID:     registerReq.BranchID,
+		DepartmentID: registerReq.DepartmentID,
+	}
 
 	// --- STEP 2: Call UserUsecase (MongoDB) ---
 	// We pass the "enriched" request to your working MongoDB usecase
-	err = a.userUsecase.Register(c.Request.Context(), authUserID, &registerReq)
+	err = a.userUsecase.Register(c.Request.Context(), authUserID, &RegisterUsecaseReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
 		return
