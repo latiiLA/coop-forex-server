@@ -13,7 +13,7 @@ import (
 )
 
 type UserController interface {
-	Register(c *gin.Context)
+	// Register(c *gin.Context)
 	Login(c *gin.Context)
 	GetAllUsers(c *gin.Context)
 	UpdateUser(c *gin.Context)
@@ -31,34 +31,34 @@ func NewUserController(userUsecase usecase.UserUsecase) UserController {
 	}
 }
 
-func (uc *userController) Register(c *gin.Context) {
-	logEntry := utils.GetLogger(c)
-	authUserID, err := utils.GetUserID(c)
-	if err != nil {
-		logEntry.WithField("error", err.Error()).Warn("user id fetch failed")
-		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
-		return
-	}
+// func (uc *userController) Register(c *gin.Context) {
+// 	logEntry := utils.GetLogger(c)
+// 	authUserID, err := utils.GetUserID(c)
+// 	if err != nil {
+// 		logEntry.WithField("error", err.Error()).Warn("user id fetch failed")
+// 		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
+// 		return
+// 	}
 
-	var registerReq model.RegisterRequestDTO
+// 	var registerReq model.RegisterRequestDTO
 
-	err = c.ShouldBindJSON(&registerReq)
-	if err != nil {
-		logEntry.WithField("error", err.Error()).Warn("register data binding failed")
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
-		return
-	}
+// 	err = c.ShouldBindJSON(&registerReq)
+// 	if err != nil {
+// 		logEntry.WithField("error", err.Error()).Warn("register data binding failed")
+// 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+// 		return
+// 	}
 
-	err = uc.userUsecase.Register(c, authUserID, &registerReq)
-	if err != nil {
-		logEntry.WithField("error", err.Error()).Warn("register failed")
-		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
-		return
-	}
+// 	err = uc.userUsecase.Register(c, authUserID, &registerReq)
+// 	if err != nil {
+// 		logEntry.WithField("error", err.Error()).Warn("register failed")
+// 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+// 		return
+// 	}
 
-	logEntry.Info("user created successfully")
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "User created successfully"})
-}
+// 	logEntry.Info("user created successfully")
+// 	c.JSON(http.StatusOK, response.SuccessResponse{Message: "User created successfully"})
+// }
 
 func (uc *userController) Login(c *gin.Context) {
 	var userReq model.LoginRequestDTO
