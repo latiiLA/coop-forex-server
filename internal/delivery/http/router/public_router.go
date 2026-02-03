@@ -34,7 +34,6 @@ func NewPublicRouter(db *mongo.Database, timeout time.Duration, group *gin.Route
 	// group.PATCH("/users", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRoles("admin"), userController.DeleteUser)
 
 	// LDAP configuration
-
 	authUsecase := usecase.NewLDAPAuthUsecase(userRepo, configs.LDAPHost, configs.LDAPPort, configs.LDAPBaseDN, configs.LDAPBindUser, configs.LDAPBindPassword, "sAMAccountName", timeout) // "uid" for testing using docker test setup - for correct AD setup sAMAccountName
 	authController := controller.NewAuthController(authUsecase, userUsecase)
 	group.POST("/login", authController.Login)
