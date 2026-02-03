@@ -56,8 +56,8 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	}
 
 	if existingUser.Status != "new" && existingUser.Status != "active" {
-		logrus.Println("Invalid username or user", err)
-		return nil, errors.New("user access has been revoced or user is deleted")
+		logrus.Println("user status is active", err)
+		return nil, errors.New("user access has been revoked or user is deleted")
 	}
 
 	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s", s.Host))
@@ -107,7 +107,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 
 	// Step 3 Prepare response and reply
 	var perms []string
-	if existingUser.Permissions != nil {
+	if existingUser.Role != nil && existingUser.Permissions != nil {
 		perms = *existingUser.Permissions
 	}
 
@@ -132,18 +132,10 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 		return nil, err
 	}
 
-	refeshToken, err := infrastructure.GenerateRefreshToken(existingUser.ID, ip)
+	refreshToken, err := infrastructure.GenerateRefreshToken(existingUser.ID, ip)
 	if err != nil {
 		return nil, err
 	}
-
-	// // Update last login
-	// var now = time.Now()
-	// existingUser.LastLogin = &now
-
-	// if _, err := uc.userRepository.Update(ctx, existingUser.ID, existingUser); err != nil {
-	// 	return nil, fmt.Errorf("user login failed %s", err)
-	// }
 
 	response := model.LoginResponseDTO{
 		ID:           existingUser.ID,
@@ -154,7 +146,22 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 		Role:         existingUser.Role.Name,
 		Permissions:  effectivePerms,
 		Token:        accessToken,
-		RefreshToken: refeshToken,
+		RefreshToken: refreshToken,
+	}
+
+	// Update last login
+	var now = time.Now()
+	if existingUser.Status == "new" {
+		existingUser.Status = "active"
+	}
+	existingUser.LastLogin = &now
+	existingUser.Updater = nil
+	existingUser.Creator = nil
+	existingUser.Profile = nil
+	existingUser.Role = nil
+
+	if _, err := s.userRepo.Update(ctx, existingUser.ID, existingUser); err != nil {
+		return nil, fmt.Errorf("user login failed %s", err)
 	}
 
 	return &response, nil

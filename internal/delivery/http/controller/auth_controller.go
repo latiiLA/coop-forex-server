@@ -104,6 +104,7 @@ func (a *authController) Register(c *gin.Context) {
 		Email:        adUser.Profile.Email,
 		BranchID:     registerReq.BranchID,
 		DepartmentID: registerReq.DepartmentID,
+		Role:         registerReq.Role,
 	}
 
 	// --- STEP 2: Call UserUsecase (MongoDB) ---
