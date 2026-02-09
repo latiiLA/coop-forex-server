@@ -48,7 +48,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
-	// Step 1 - check local database
+	// check local database
 	existingUser, err := s.userRepo.FindByUsername(ctx, username)
 	if err != nil {
 		logrus.Println("Invalid username or user", err)
@@ -67,7 +67,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	}
 	defer l.Close()
 
-	// Step 2.1: Search for user DN
+	// Search for user DN
 	searchRequest := ldap.NewSearchRequest(
 		s.BasedDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
@@ -76,7 +76,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 		nil,
 	)
 
-	// Step 2.2: Bind with service account
+	// Bind with service account
 	err = l.Bind(s.BindUser, s.BindPassword)
 	if err != nil {
 		log.Println(fmt.Errorf("bind failed: %w", err))
@@ -97,7 +97,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	userDN := sr.Entries[0].DN
 	log.Printf("LDAP: Found user DN = %s\n", userDN)
 
-	// Step 2.3: Try binding as the user with the provided password
+	// Try binding as the user with the provided password
 	err = l.Bind(userDN, password)
 	if err != nil {
 		log.Println(fmt.Errorf("user authentication failed: %w", err))
@@ -105,7 +105,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	}
 	log.Println("✅ User authentication successful")
 
-	// Step 3 Prepare response and reply
+	// Prepare response and reply
 	var perms []string
 	if existingUser.Role != nil && existingUser.Permissions != nil {
 		perms = *existingUser.Permissions
@@ -197,6 +197,7 @@ func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (
 	}
 
 	entry := sr.Entries[0]
+
 	// log.Println("===== LDAP ATTRIBUTES DUMP =====")
 
 	// for _, attr := range entry.Attributes {
