@@ -171,6 +171,7 @@ func (br *branchRepository) FindByDistrictID(ctx context.Context, districtID pri
 		bson.D{
 			{Key: "$match", Value: bson.D{
 				{Key: "is_deleted", Value: false},
+				{Key: "district_id", Value: districtID},
 			}},
 		},
 		bson.D{
