@@ -61,7 +61,7 @@
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345678002" },
-        "name": "FOREX_APPROVER",
+        "name": "FOREXAPPROVER",
         "permissions": [
             "request:view-validated",
             "request:view-declined",
@@ -85,7 +85,7 @@
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345678003" },
-        "name": "FOREX_USER",
+        "name": "FOREXUSER",
         "permissions": [
             "request:validate",
             "request:view-authorized",
@@ -110,7 +110,7 @@
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345678004" },
-        "name": "BRANCH_AUTHORIZER",
+        "name": "BRANCHAUTHORIZER",
         "permissions": [
             "request:status",
             "request:view-orgapproved",
@@ -130,7 +130,7 @@
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345678005" },
-        "name": "BRANCH_USER",
+        "name": "BRANCHUSER",
         "permissions": [
             "request:add",
             "request:status",
@@ -153,7 +153,7 @@
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345678006" },
-        "name": "PROCESSOR_USER",
+        "name": "PROCESSORUSER",
         "permissions": [
             "request:add",
             "request:status",
@@ -181,7 +181,7 @@
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345678007" },
-        "name": "PROCESSOR_AUTHORIZER",
+        "name": "PROCESSORAUTHORIZER",
         "permissions": [
             "request:status",
             "request:reject",
@@ -206,7 +206,7 @@
       },
       {
         "_id": { "$oid": "66a7b8c9e4b0f12345678008" },
-        "name": "FOREX_ADMIN",
+        "name": "FOREXADMIN",
         "permissions": [
             "user:view",
             "user:add",
