@@ -16,6 +16,7 @@
           "username": { "bsonType": "string" },
           "password": { "bsonType": "string" },
           "status": { "bsonType": "string" },
+          "signature": { "bsonType": "string" }, 
           "last_login": { "bsonType": ["date"] },
           "created_by": { "bsonType": "objectId" },
           "updated_by": { "bsonType": ["objectId"]},
