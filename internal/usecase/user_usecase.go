@@ -57,10 +57,6 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 		return errors.New("username already exists")
 	}
 
-	// if _, err := uc.profileRepository.FindByEmail(ctx, registerReq.Email); err == nil {
-	// 	return errors.New("email already exists")
-	// }
-
 	// start MongoDB session
 	session, err := uc.client.StartSession()
 	if err != nil {
@@ -183,6 +179,7 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		Email:        existingUser.Profile.Email,
 		Role:         existingUser.Role.Name,
 		Permissions:  effectivePerms,
+		Signature:    existingUser.Signature,
 		Token:        accessToken,
 		RefreshToken: refeshToken,
 	}

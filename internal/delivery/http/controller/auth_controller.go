@@ -107,8 +107,6 @@ func (a *authController) Register(c *gin.Context) {
 		Role:         registerReq.Role,
 	}
 
-	// --- STEP 2: Call UserUsecase (MongoDB) ---
-	// We pass the "enriched" request to your working MongoDB usecase
 	err = a.userUsecase.Register(c.Request.Context(), authUserID, &RegisterUsecaseReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
