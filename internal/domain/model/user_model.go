@@ -18,6 +18,7 @@ type User struct {
 	Password    string              `json:"-" bson:"password,omitempty"`
 	Status      string              `json:"status" bson:"status"`
 	LastLogin   *time.Time          `json:"last_login,omitempty" bson:"last_login,omitempty"`
+	Signature   *string             `json:"signature,omitempty" bson:"signature,omitempty"`
 	CreatedAt   time.Time           `json:"created_at" bson:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at" bson:"updated_at"`
 	CreatedBy   primitive.ObjectID  `json:"created_by" bson:"created_by"`
@@ -79,6 +80,7 @@ type LoginResponseDTO struct {
 	Email        string              `json:"email" bson:"email"`
 	DepartmentID *primitive.ObjectID `json:"department_id,omitempty" bson:"department_id,omitempty"`
 	BranchID     *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
+	Signature    *string             `json:"signature,omitempty" bson:"signature,omitempty"`
 	Token        string              `json:"token" bson:"-"`
 	RefreshToken string              `json:"refresh_token" bson:"-"`
 }
@@ -92,6 +94,7 @@ type UserResponseDTO struct {
 	Status      string             `json:"status" bson:"status"`
 	Department  *Department        `json:"department,omitempty" bson:"department,omitempty"`
 	Branch      *Branch            `json:"branch,omitempty" bson:"branch,omitempty"`
+	Signature   *string            `json:"signature,omitempty" bson:"signature,omitempty"`
 	CreatedAt   time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt   time.Time          `json:"updated_at" bson:"updated_at"`
 	CreatedBy   string             `json:"created_by" bson:"created_by"`

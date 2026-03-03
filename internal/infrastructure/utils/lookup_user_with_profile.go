@@ -46,7 +46,8 @@ func LookupUserWithProfile(localField, alias string) mongo.Pipeline {
 					bson.D{{Key: "$project", Value: bson.D{
 						{Key: "first_name", Value: 1},
 						{Key: "middle_name", Value: 1},
-						{Key: "last_name", Value: 1}},
+						{Key: "last_name", Value: 1},
+						{Key: "signature", Value: 1}},
 					}}, // optimization
 				}},
 				{Key: "as", Value: profileAlias},
