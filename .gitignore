@@ -11,4 +11,4 @@ ssl/*.key
 ssl/*.pem
 ssl/*.crt
 
-/internal/migration/
+internal/migration/
