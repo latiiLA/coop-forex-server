@@ -91,15 +91,16 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 		}
 
 		user := &model.User{
-			ID:        primitive.NewObjectID(),
-			ProfileID: profile.ID,
-			RoleID:    registerReq.Role,
-			Username:  registerReq.Username,
-			Status:    "new",
-			CreatedBy: authUserID,
-			IsDeleted: false,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:          primitive.NewObjectID(),
+			ProfileID:   profile.ID,
+			RoleID:      registerReq.Role,
+			Username:    registerReq.Username,
+			Status:      "new",
+			CreatedBy:   authUserID,
+			Permissions: registerReq.Permissions,
+			IsDeleted:   false,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		}
 
 		if err := uc.userRepository.Create(sessCtx, user); err != nil {
@@ -134,7 +135,7 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 
 	var perms []string
 	if existingUser.Permissions != nil {
-		perms = *existingUser.Permissions
+		perms = existingUser.Permissions
 	}
 
 	effectivePerms := utils.MergePermissions(existingUser.Role.Permissions, perms)
@@ -376,7 +377,7 @@ func (a *userUsecase) RefreshToken(ctx context.Context, refreshToken model.Refre
 
 	permissions := []string{}
 	if user.Permissions != nil {
-		permissions = *user.Permissions
+		permissions = user.Permissions
 	}
 
 	newAccessToken, err := infrastructure.GenerateToken(user.ID, role.Name, branchID, departmentID, permissions, clientIP)

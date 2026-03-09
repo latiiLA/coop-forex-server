@@ -107,6 +107,10 @@ func (a *authController) Register(c *gin.Context) {
 		Role:         registerReq.Role,
 	}
 
+	if len(registerReq.Permissions) != 0 {
+		RegisterUsecaseReq.Permissions = registerReq.Permissions
+	}
+
 	err = a.userUsecase.Register(c.Request.Context(), authUserID, &RegisterUsecaseReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})

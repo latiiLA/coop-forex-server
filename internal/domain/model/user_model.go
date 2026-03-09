@@ -11,7 +11,7 @@ type User struct {
 	ID          primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	RoleID      primitive.ObjectID  `json:"role_id" bson:"role_id"`
 	Role        *Role               `json:"role,omitempty" bson:"role,omitempty"`
-	Permissions *[]string           `json:"permissions,omitempty" bson:"permissions,omitempty"`
+	Permissions []string            `json:"permissions,omitempty" bson:"permissions,omitempty"`
 	ProfileID   primitive.ObjectID  `json:"profile_id" bson:"profile_id"`
 	Profile     *Profile            `json:"profile,omitempty" bson:"profile,omitempty"`
 	Username    string              `json:"username" bson:"username"`
@@ -36,6 +36,7 @@ type RegisterRequestDTO struct {
 	FirstName    string              `json:"first_name" binding:"required,min=3"`
 	MiddleName   string              `json:"middle_name" binding:"required,min=3"`
 	LastName     string              `json:"last_name" binding:"required,min=3"`
+	Permissions  []string            `json:"permissions"`
 	Role         primitive.ObjectID  `json:"role" binding:"required"`
 	DepartmentID *primitive.ObjectID `json:"department"`
 	BranchID     *primitive.ObjectID `json:"branch"`
@@ -49,6 +50,7 @@ type RegisterUsecaseRequestDTO struct {
 	DisplayName  string
 	LastName     string
 	Role         primitive.ObjectID
+	Permissions  []string
 	Email        string
 	DepartmentID *primitive.ObjectID
 	BranchID     *primitive.ObjectID

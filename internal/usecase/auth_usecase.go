@@ -108,7 +108,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	// Prepare response and reply
 	var perms []string
 	if existingUser.Role != nil && existingUser.Permissions != nil {
-		perms = *existingUser.Permissions
+		perms = existingUser.Permissions
 	}
 
 	effectivePerms := utils.MergePermissions(existingUser.Role.Permissions, perms)
