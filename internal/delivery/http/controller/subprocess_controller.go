@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/usecase"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -28,11 +28,11 @@ func NewSubprocessController(subprocessUsecase usecase.SubprocessUsecase) Subpro
 func (pc *subprocessController) GetAllSubprocesses(c *gin.Context) {
 	subprocesses, err := pc.subprocessUsecase.GetAllSubprocesses(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, subprocesses)
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Subprocesses fetched successfully", Data: subprocesses})
 }
 
 func (pc *subprocessController) GetSubprocessByProcessID(c *gin.Context) {
@@ -40,23 +40,21 @@ func (pc *subprocessController) GetSubprocessByProcessID(c *gin.Context) {
 	// get process id from param
 	processID := c.Param("id")
 	if processID == "" {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "process ID is required"})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "process ID is required"})
 		return
 	}
 
 	processObjID, err := primitive.ObjectIDFromHex(processID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: err.Error()})
 		return
 	}
-
-	fmt.Println("processID", processObjID)
 
 	subprocesses, err := pc.subprocessUsecase.GetSubprocessByProcessID(c, processObjID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, subprocesses)
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Subprocesses fetched successfully", Data: subprocesses})
 }

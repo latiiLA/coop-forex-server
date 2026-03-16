@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/usecase"
 )
@@ -25,9 +26,9 @@ func NewCurrencyController(currencyUsecase usecase.CurrencyUsecase) CurrencyCont
 func (cc *currencyController) GetAllCurrency(c *gin.Context) {
 	currencies, err := cc.currencyUsecase.GetAllCurrency(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, currencies)
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Currencies fetched successfully", Data: currencies})
 }

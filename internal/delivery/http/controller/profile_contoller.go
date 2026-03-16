@@ -1,9 +1,12 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
@@ -31,47 +34,47 @@ func NewProfileController(profileUsecase usecase.ProfileUsecase, userUsecase use
 func (pc *profileController) GetProfileByID(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
 		return
 	}
 
 	profileID := c.Param("id")
 	if profileID == "" {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "profile id not found in param"})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "profile id not found in param"})
 		return
 	}
 
 	profileObjID, err := primitive.ObjectIDFromHex(profileID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: err.Error()})
 		return
 	}
 
 	profile, err := pc.profileUsecase.GetProfileByID(c, authUserID, profileObjID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "profile fetched successfully", Data: profile})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Profile fetched successfully", Data: profile})
 }
 
 func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
 		return
 	}
 
 	profileID := c.Param("id")
 	if profileID == "" {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: "profile id not found in param"})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "profile id not found in param"})
 		return
 	}
 
 	profileObjID, err := primitive.ObjectIDFromHex(profileID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: err.Error()})
 		return
 	}
 
@@ -79,15 +82,30 @@ func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 
 	err = c.ShouldBindJSON(&updatedData)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			message := fmt.Sprintf("%s failed on %s validation", e.Field(), e.Tag())
+
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: message,
+				Error:   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
 		return
 	}
 
 	profile, err := pc.profileUsecase.UpdateProfileByUserID(c, authUserID, profileObjID, &updatedData)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "profile updated successfully", Data: profile})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Profile updated successfully", Data: profile})
 }
