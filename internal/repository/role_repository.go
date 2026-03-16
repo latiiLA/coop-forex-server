@@ -22,6 +22,7 @@ func NewRoleRepository(db *mongo.Database) model.RoleRepository {
 
 func (rr *roleRepository) Create(ctx context.Context, role *model.Role) error {
 	_, err := rr.collection.InsertOne(ctx, role)
+
 	return err
 }
 
@@ -30,10 +31,10 @@ func (rr *roleRepository) FindByID(ctx context.Context, role_id primitive.Object
 	filter := bson.M{"_id": role_id, "is_deleted": false}
 
 	err := rr.collection.FindOne(ctx, filter).Decode(&role)
-	if err == mongo.ErrNoDocuments {
-		return nil, nil
-	}
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 

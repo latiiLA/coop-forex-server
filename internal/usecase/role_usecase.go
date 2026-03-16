@@ -2,11 +2,11 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -38,7 +38,7 @@ func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectI
 	defer cancel()
 
 	if role.Name == "SUPERADMIN" {
-		return errors.New("role not allowed")
+		return common.ErrRoleNameNotAllowed
 	}
 
 	existingRoleName, err := ru.roleRepository.FindRoleByName(ctx, strings.ToUpper(role.Name))
@@ -46,7 +46,7 @@ func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectI
 		return err
 	}
 	if existingRoleName != nil {
-		return errors.New("role already exists")
+		return common.ErrRoleNameAlreadyExists
 	}
 
 	createdRole := model.Role{}
@@ -68,12 +68,14 @@ func (ru *roleUsecase) AddRole(ctx context.Context, authUserID primitive.ObjectI
 func (ru *roleUsecase) GetRoleByID(ctx context.Context, role_id primitive.ObjectID) (*model.Role, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
+
 	return ru.roleRepository.FindByID(ctx, role_id)
 }
 
 func (ru *roleUsecase) GetAllRoles(ctx context.Context) ([]model.Role, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
+
 	return ru.roleRepository.FindAll(ctx)
 }
 
@@ -87,7 +89,7 @@ func (ru *roleUsecase) UpdateRole(ctx context.Context, authUserID primitive.Obje
 	}
 
 	if role == nil {
-		return errors.New("role not found")
+		return common.ErrADUserNotFound
 	}
 
 	if roleUpdated.Name != "" {
@@ -96,7 +98,7 @@ func (ru *roleUsecase) UpdateRole(ctx context.Context, authUserID primitive.Obje
 			return nil
 		}
 		if existingRoleName != nil && role.Name != existingRoleName.Name {
-			return errors.New("role with this name already exists")
+			return common.ErrRoleNameAlreadyExists
 		}
 
 		role.Name = strings.ToUpper(roleUpdated.Name)
