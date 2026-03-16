@@ -15,7 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
 
 func setupLogger() {
@@ -23,12 +22,12 @@ func setupLogger() {
 	if _, err := os.Stat("logs"); os.IsNotExist(err) {
 		err := os.Mkdir("logs", os.ModePerm)
 		if err != nil {
-			log.Fatal("❌ Could not open log file:", err)
+			logrus.Fatal("❌ Could not open log file:", err)
 		}
 	}
 
 	// Lumberjack handles rotation
-	log.SetOutput(&lumberjack.Logger{
+	logrus.SetOutput(&lumberjack.Logger{
 		Filename:   "logs/server.log",
 		MaxSize:    100,
 		MaxBackups: 100,
@@ -36,12 +35,12 @@ func setupLogger() {
 		Compress:   true,
 	})
 
-	log.SetFormatter(&log.JSONFormatter{})
-	logLevel, err := log.ParseLevel(configs.LogLevel)
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logLevel, err := logrus.ParseLevel(configs.LogLevel)
 	if err != nil {
-		logLevel = log.InfoLevel
+		logLevel = logrus.InfoLevel
 	}
-	log.SetLevel(logLevel)
+	logrus.SetLevel(logLevel)
 }
 
 func main() {
@@ -53,23 +52,23 @@ func main() {
 	clientOptions := options.Client().ApplyURI(configs.MongoURL)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		log.Fatal("Mongo connection error:", err)
+		logrus.Fatal("Mongo connection error:", err)
 	}
 
 	defer func() {
 		if err := client.Disconnect(ctx); err != nil {
-			log.Printf("Warning: failed to disconnect from DB: %v", err)
+			logrus.Printf("Warning: failed to disconnect from DB: %v", err)
 
 		} else {
-			log.Printf("DB connection closed")
+			logrus.Printf("DB connection closed")
 		}
 	}()
 
 	if err = client.Ping(ctx, nil); err != nil {
-		log.Fatal("Ping error:", err)
+		logrus.Fatal("Ping error:", err)
 	}
 
-	log.Info("✅ Connected to DB!")
+	logrus.Info("✅ Connected to DB!")
 
 	db_name := "forex_db"
 	if configs.DBName != "" {
@@ -113,6 +112,6 @@ func main() {
 	router.RouterSetup(api, timeout, db)
 
 	if err := r.RunTLS(":8080", configs.CertFile, configs.KeyFile); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+		logrus.Fatalf("Server failed to start: %v", err)
 	}
 }
