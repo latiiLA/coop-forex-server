@@ -1,9 +1,13 @@
 package controller
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
@@ -43,7 +47,22 @@ func (a *authController) Login(c *gin.Context) {
 			"error":      err.Error(),
 		}).Warn("Invalid login request payload")
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			message := fmt.Sprintf("%s failed on %s validation", e.Field(), e.Tag())
+
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: message,
+				Error:   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
 		return
 	}
 
@@ -63,7 +82,35 @@ func (a *authController) Login(c *gin.Context) {
 			"ip":       clientIP,
 			"error":    err.Error(),
 		}).Warn("Login failed")
-		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: "invalid credential or internal server error"})
+
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrInvalidCredentials):
+			status = http.StatusUnauthorized
+			message = "Invalid credentials"
+
+		case errors.Is(err, common.ErrUserAccessRevoked):
+			status = http.StatusUnauthorized
+			message = "Account account status has been disabled"
+
+		case errors.Is(err, common.ErrADUserNotFound):
+			status = http.StatusForbidden
+			message = "User don't have AD account"
+
+		case errors.Is(err, common.ErrUserNotFound):
+			status = http.StatusForbidden
+			message = "User isn't registered for the system"
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -73,25 +120,55 @@ func (a *authController) Login(c *gin.Context) {
 		"ip":       clientIP,
 	}).Info("Login successful")
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "Login Successful", Data: user})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Logged In Successfully", Data: user})
 }
 
 func (a *authController) Register(c *gin.Context) {
+	var (
+		status  int
+		message string
+	)
+
 	logEntry := utils.GetLogger(c)
 	authUserID, _ := utils.GetUserID(c)
 
 	var registerReq model.RegisterRequestDTO
 	if err := c.ShouldBindJSON(&registerReq); err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			e := validationErrors[0]
+			message := fmt.Sprintf("%s failed on %s validation", e.Field(), e.Tag())
+
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: message,
+				Error:   err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
 		return
 	}
 
-	// --- STEP 1: Call AuthUsecase (LDAP) ---
-	// We get the official data from Active Directory
+	// Call AuthUsecase (LDAP) ---
 	adUser, err := a.authUsecase.GetUserDetails(c.Request.Context(), registerReq.Username)
 	if err != nil {
 		logEntry.Warn("Get user detail from AD error: ", err)
-		c.JSON(http.StatusForbidden, response.ErrorResponse{Message: "User must exist in AD"})
+
+		switch {
+		case errors.Is(err, common.ErrADUserNotFound):
+			status = http.StatusForbidden
+			message = "User don't have AD account"
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -113,9 +190,24 @@ func (a *authController) Register(c *gin.Context) {
 
 	err = a.userUsecase.Register(c.Request.Context(), authUserID, &RegisterUsecaseReq)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+		switch {
+		case errors.Is(err, common.ErrBranchOrDepartmentNotFound):
+			status = http.StatusBadRequest
+			message = "Branch or Department is required"
+
+		case errors.Is(err, common.ErrUsernameAlreadyExists):
+
+			status = http.StatusConflict
+			message = "Username already has been registered"
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.SuccessResponse{Message: "User registered successfully"})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "User registered successfully"})
 }

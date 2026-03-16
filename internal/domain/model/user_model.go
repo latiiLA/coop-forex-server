@@ -7,6 +7,17 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type UserStatus string
+
+const (
+	StatusNew         UserStatus = "new"
+	StatusActive      UserStatus = "active"
+	StatusInactive    UserStatus = "inactive"
+	StatusSuspended   UserStatus = "suspended"
+	StatusDeactivated UserStatus = "deactivated"
+	StatusDeleted     UserStatus = "deleted"
+)
+
 type User struct {
 	ID          primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	RoleID      primitive.ObjectID  `json:"role_id" bson:"role_id"`
@@ -16,7 +27,7 @@ type User struct {
 	Profile     *Profile            `json:"profile,omitempty" bson:"profile,omitempty"`
 	Username    string              `json:"username" bson:"username"`
 	Password    string              `json:"-" bson:"password,omitempty"`
-	Status      string              `json:"status" bson:"status"`
+	Status      UserStatus          `json:"status" bson:"status"`
 	LastLogin   *time.Time          `json:"last_login,omitempty" bson:"last_login,omitempty"`
 	Signature   *string             `json:"signature,omitempty" bson:"signature,omitempty"`
 	CreatedAt   time.Time           `json:"created_at" bson:"created_at"`
@@ -31,15 +42,15 @@ type User struct {
 }
 
 type RegisterRequestDTO struct {
-	Username     string              `json:"username" binding:"required,min=3"`
-	Password     string              `json:"password" binding:"omitempty,alphanum,min=6"`
-	FirstName    string              `json:"first_name" binding:"required,min=3"`
-	MiddleName   string              `json:"middle_name" binding:"required,min=3"`
-	LastName     string              `json:"last_name" binding:"required,min=3"`
+	Username     string              `json:"username" binding:"required,min=3,max=50,alphanum"`
+	Password     string              `json:"password" binding:"omitempty,alphanum,min=6,max=50,containsany=!@#$%^&*"`
+	FirstName    string              `json:"first_name" binding:"required,min=3,max=50,alphaunicode"`
+	MiddleName   string              `json:"middle_name" binding:"required,min=3,max=50,alphaunicode"`
+	LastName     string              `json:"last_name" binding:"required,min=3,max=50,alphaunicode"`
 	Permissions  []string            `json:"permissions"`
-	Role         primitive.ObjectID  `json:"role" binding:"required"`
-	DepartmentID *primitive.ObjectID `json:"department"`
-	BranchID     *primitive.ObjectID `json:"branch"`
+	Role         primitive.ObjectID  `json:"role" binding:"required,len=24,hexadecimal"`
+	DepartmentID *primitive.ObjectID `json:"department" binding:"omitempty,len=24,hexadecimal"`
+	BranchID     *primitive.ObjectID `json:"branch" binding:"omitempty,len=24,hexadecimal"`
 }
 
 type RegisterUsecaseRequestDTO struct {
@@ -57,19 +68,19 @@ type RegisterUsecaseRequestDTO struct {
 }
 
 type UpdateUserRequestDTO struct {
-	Username     string              `json:"username" binding:"omitempty,min=3"`
-	Password     string              `json:"password" binding:"omitempty,alphanum,min=6"`
-	FirstName    string              `json:"first_name" binding:"omitempty,min=3"`
-	MiddleName   string              `json:"middle_name" binding:"omitempty,min=3"`
-	LastName     string              `json:"last_name" binding:"omitempty,min=3"`
-	Role         primitive.ObjectID  `json:"role" binding:"omitempty"`
-	DepartmentID *primitive.ObjectID `json:"department_id" binding:"omitempty"`
-	BranchID     *primitive.ObjectID `json:"branch_id" binding:"omitempty"`
+	Username     string              `json:"username" binding:"omitempty,min=3,max=50,alphanum"`
+	Password     string              `json:"password" binding:"omitempty,min=6,max=50,containsany=!@#$%^&*"`
+	FirstName    string              `json:"first_name" binding:"omitempty,min=3,max=50,alphaunicode"`
+	MiddleName   string              `json:"middle_name" binding:"omitempty,min=3,max=50,alphaunicode"`
+	LastName     string              `json:"last_name" binding:"omitempty,min=3,max=50,alphaunicode"`
+	Role         primitive.ObjectID  `json:"role" binding:"omitempty,len=24,hexadecimal"`
+	DepartmentID *primitive.ObjectID `json:"department_id" binding:"omitempty,len=24,hexadecimal"`
+	BranchID     *primitive.ObjectID `json:"branch_id" binding:"omitempty,len=24,hexadecimal"`
 }
 
 type LoginRequestDTO struct {
-	Username string `json:"username" binding:"required,min=3"`
-	Password string `json:"password" binding:"required,min=6"`
+	Username string `json:"username" binding:"required,min=3,max=50,alphanum"`
+	Password string `json:"password" binding:"required,min=6,max=50"`
 }
 
 type LoginResponseDTO struct {
@@ -90,7 +101,7 @@ type LoginResponseDTO struct {
 type UserResponseDTO struct {
 	ID          primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
 	Role        Role               `json:"role" bson:"role"`
-	Permissions *[]string          `json:"permissions,omitempty" bson:"permissions,omitempty"`
+	Permissions []string           `json:"permissions,omitempty" bson:"permissions,omitempty"`
 	Profile     Profile            `json:"profile" bson:"profile"`
 	Username    string             `json:"username" bson:"username"`
 	Status      string             `json:"status" bson:"status"`

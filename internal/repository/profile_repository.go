@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,6 +23,7 @@ func NewProfileRepository(db *mongo.Database) model.ProfileRepository {
 
 func (pr *profileRepository) Create(ctx context.Context, profile *model.Profile) error {
 	_, err := pr.collection.InsertOne(ctx, profile)
+
 	return err
 }
 
@@ -33,8 +34,9 @@ func (pr *profileRepository) FindByID(ctx context.Context, profile_id primitive.
 	err := pr.collection.FindOne(ctx, filter).Decode(&profile)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, fmt.Errorf("profile not found")
+			return nil, common.ErrProfileNotFound
 		}
+
 		return nil, err
 	}
 
@@ -49,6 +51,7 @@ func (pr *profileRepository) FindByEmail(ctx context.Context, email string) (*mo
 	if err != nil {
 		return nil, err
 	}
+
 	return &profile, nil
 }
 
@@ -62,7 +65,7 @@ func (pr *profileRepository) Update(ctx context.Context, profile_id primitive.Ob
 	}
 
 	if result.MatchedCount == 0 {
-		return nil, fmt.Errorf("profile not found")
+		return nil, common.ErrProfileNotFound
 	}
 
 	// if result.ModifiedCount == 0 {

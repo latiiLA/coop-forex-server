@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/copier"
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
@@ -49,12 +50,12 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 	defer cancel()
 
 	if registerReq.BranchID == nil && registerReq.DepartmentID == nil {
-		return errors.New("either BranchID or DepartmentID must be provided")
+		return common.ErrBranchOrDepartmentNotFound
 	}
 
 	existingUser, err := uc.userRepository.FindByUsername(ctx, registerReq.Username)
 	if err == nil && existingUser.Username != "" {
-		return errors.New("username already exists")
+		return common.ErrUsernameAlreadyExists
 	}
 
 	// start MongoDB session
@@ -95,7 +96,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 			ProfileID:   profile.ID,
 			RoleID:      registerReq.Role,
 			Username:    registerReq.Username,
-			Status:      "new",
+			Status:      model.StatusNew,
 			CreatedBy:   authUserID,
 			Permissions: registerReq.Permissions,
 			IsDeleted:   false,
@@ -110,6 +111,7 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 
 		return session.CommitTransaction(sessCtx)
 	})
+
 	return err
 }
 
@@ -120,17 +122,17 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 	existingUser, err := uc.userRepository.FindByUsername(ctx, userReq.Username)
 	if err != nil {
 		fmt.Println("Invalid username or user", err)
-		return nil, errors.New("invalid username or password")
+		return nil, common.ErrInvalidCredentials
 	}
 
 	if existingUser.Status != "active" && existingUser.Status != "new" {
-		return nil, errors.New("user account is not active. contact administrator")
+		return nil, common.ErrUserAccessRevoked
 	}
 
 	err = infrastructure.CheckPasswordHash(existingUser.Password, userReq.Password)
 	if err != nil {
 		fmt.Println("Invalid password:", err)
-		return nil, errors.New("invalid username or password")
+		return nil, common.ErrInvalidCredentials
 	}
 
 	var perms []string

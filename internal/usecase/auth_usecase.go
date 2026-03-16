@@ -2,17 +2,18 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type AuthUsecase interface {
@@ -51,13 +52,17 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	// check local database
 	existingUser, err := s.userRepo.FindByUsername(ctx, username)
 	if err != nil {
-		logrus.Println("Invalid username or user", err)
-		return nil, errors.New("invalid username or password")
+		logrus.Println("invalid username or user", err)
+		if err == mongo.ErrNoDocuments {
+			return nil, common.ErrUserNotFound
+		}
+
+		return nil, common.ErrInvalidCredentials
 	}
 
-	if existingUser.Status != "new" && existingUser.Status != "active" {
+	if existingUser.Status != model.StatusNew && existingUser.Status != model.StatusActive {
 		logrus.Println("user status is active", err)
-		return nil, errors.New("user access has been revoked or user is deleted")
+		return nil, common.ErrUserAccessRevoked
 	}
 
 	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s", s.Host))
@@ -91,7 +96,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	}
 	if len(sr.Entries) == 0 {
 		log.Println(fmt.Errorf("user not found"))
-		return nil, fmt.Errorf("user not found")
+		return nil, common.ErrADUserNotFound
 	}
 
 	userDN := sr.Entries[0].DN
@@ -101,7 +106,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	err = l.Bind(userDN, password)
 	if err != nil {
 		log.Println(fmt.Errorf("user authentication failed: %w", err))
-		return nil, fmt.Errorf("authentication failed: invalid username or password")
+		return nil, common.ErrInvalidCredentials
 	}
 	log.Println("✅ User authentication successful")
 
@@ -151,8 +156,8 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 
 	// Update last login
 	var now = time.Now()
-	if existingUser.Status == "new" {
-		existingUser.Status = "active"
+	if existingUser.Status == model.StatusNew {
+		existingUser.Status = model.StatusActive
 	}
 	existingUser.LastLogin = &now
 	existingUser.Updater = nil
@@ -193,7 +198,7 @@ func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (
 
 	sr, err := l.Search(searchRequest)
 	if err != nil || len(sr.Entries) == 0 {
-		return nil, errors.New("user not found")
+		return nil, common.ErrADUserNotFound
 	}
 
 	entry := sr.Entries[0]
