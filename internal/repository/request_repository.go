@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"github.com/sirupsen/logrus"
@@ -24,11 +24,11 @@ func NewRequestRepository(db *mongo.Database) model.RequestRepository {
 
 func (rr *requestRepository) Create(ctx context.Context, request *model.Request) error {
 	_, err := rr.collection.InsertOne(ctx, request)
+
 	return err
 }
 
 func (rr *requestRepository) FindAll(ctx context.Context, populate bool) ([]model.Request, error) {
-
 	pipeline := mongo.Pipeline{
 		bson.D{
 			{Key: "$match", Value: bson.D{
@@ -75,7 +75,7 @@ func (rr *requestRepository) Validate(ctx context.Context, request_id primitive.
 
 	// Check if any document was actually modified
 	if result.MatchedCount == 0 {
-		return fmt.Errorf("no request found with id %s", request_id.Hex())
+		return common.ErrRequestNotFound
 	}
 
 	return nil
@@ -106,7 +106,7 @@ func (rr *requestRepository) FindByID(ctx context.Context, requestID primitive.O
 	}
 
 	if len(results) == 0 {
-		return nil, mongo.ErrNoDocuments
+		return nil, nil
 	}
 
 	return &results[0], nil
@@ -186,7 +186,7 @@ func (rr *requestRepository) Update(ctx context.Context, requestID primitive.Obj
 
 	// Check if any document was actually modified
 	if result.MatchedCount == 0 {
-		return fmt.Errorf("no request found with id %s", requestID)
+		return common.ErrRequestNotFound
 	}
 
 	return nil

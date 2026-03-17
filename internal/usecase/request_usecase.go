@@ -2,12 +2,12 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jinzhu/copier"
 	"github.com/latiiLA/coop-forex-server/configs"
+	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"github.com/sirupsen/logrus"
@@ -68,8 +68,7 @@ func (ru *requestUsecase) AddRequest(ctx context.Context, authUserID primitive.O
 
 	existingUser, err := ru.userRepository.FindByID(ctx, authUserID)
 	if err != nil {
-		fmt.Println("Invalid userID", err)
-		return errors.New("unauthorized access")
+		return common.ErrUnauthorized
 	}
 
 	// forexRequest := model.Request{}
@@ -87,14 +86,12 @@ func (ru *requestUsecase) AddRequest(ctx context.Context, authUserID primitive.O
 	request.CreatedAt = time.Now()
 	request.UpdatedAt = time.Now()
 	request.CreatedBy = authUserID
-	request.RequestStatus = "Drafted"
+	request.RequestStatus = model.ReqStatusDrafted
 	request.IsDeleted = false
 
 	err = ru.requestRepository.Create(ctx, request)
-
 	if err != nil {
-		fmt.Println("request creation error", err)
-		return errors.New("internal server error")
+		return err
 	}
 
 	return nil
@@ -108,14 +105,14 @@ func (ru *requestUsecase) UpdateRequest(ctx context.Context, authUserID primitiv
 	existingUser, err := ru.userRepository.FindByID(ctx, authUserID)
 	if err != nil {
 		logrus.WithError(err).WithField("userID", authUserID).Error("Failed to find user")
-		return errors.New("unauthorized access")
+		return common.ErrUnauthorized
 	}
 
 	// 2. Get existing request
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
 		logrus.WithError(err).WithField("requestID", requestID).Error("Failed to find request")
-		return errors.New("request doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// 3. Authorization check - fixed logical condition
@@ -127,7 +124,7 @@ func (ru *requestUsecase) UpdateRequest(ctx context.Context, authUserID primitiv
 			"userID":          authUserID,
 			"requestID":       requestID,
 		}).Warn("Unauthorized branch access attempt")
-		return errors.New("unauthorized access")
+		return common.ErrUnauthorized
 	}
 
 	if existingUser.Profile.DepartmentID != nil && existingRequest.DepartmentID != nil &&
@@ -138,7 +135,7 @@ func (ru *requestUsecase) UpdateRequest(ctx context.Context, authUserID primitiv
 			"userID":        authUserID,
 			"requestID":     requestID,
 		}).Warn("Unauthorized department access attempt")
-		return errors.New("unauthorized access")
+		return common.ErrUnauthorized
 	}
 
 	// 4. Create update object
@@ -197,7 +194,7 @@ func (ru *requestUsecase) UpdateRequest(ctx context.Context, authUserID primitiv
 
 	if err := ru.requestRepository.Update(ctx, requestID, &forexRequest); err != nil {
 		logrus.WithError(err).WithField("requestID", requestID).Error("Failed to update request")
-		return fmt.Errorf("failed to update request: %w", err)
+		return err
 	}
 
 	logrus.WithFields(logrus.Fields{
@@ -211,49 +208,50 @@ func (ru *requestUsecase) UpdateRequest(ctx context.Context, authUserID primitiv
 func (ru *requestUsecase) GetAllRequests(ctx context.Context) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
+
 	return ru.requestRepository.FindAll(ctx, true)
 }
 
 func (ru *requestUsecase) GetAuthorizedRequests(ctx context.Context) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
-	return ru.requestRepository.FindByRequestStatus(ctx, "Authorized", true)
+
+	return ru.requestRepository.FindByRequestStatus(ctx, string(model.ReqStatusAuthorized), true)
 }
 
 func (ru *requestUsecase) GetValidatedRequests(ctx context.Context) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindByRequestStatus(ctx, "Validated", true)
+	return ru.requestRepository.FindByRequestStatus(ctx, string(model.ReqStatusValidated), true)
 }
 
 func (ru *requestUsecase) GetApprovedRequests(ctx context.Context) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindByRequestStatus(ctx, "Approved", true)
+	return ru.requestRepository.FindByRequestStatus(ctx, string(model.ReqStatusApproved), true)
 }
 
 func (ru *requestUsecase) GetAcceptedRequests(ctx context.Context) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindByRequestStatus(ctx, "Accepted", true)
+	return ru.requestRepository.FindByRequestStatus(ctx, string(model.ReqStatusAccepted), true)
 }
 
 func (ru *requestUsecase) GetDeclinedRequests(ctx context.Context) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindByRequestStatus(ctx, "Declined", true)
+	return ru.requestRepository.FindByRequestStatus(ctx, string(model.ReqStatusDeclined), true)
 }
 
 // Org Related Fetches
-
 func (ru *requestUsecase) GetAllOrgRequests(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
-	fmt.Println("hello department", orgID)
+
 	return ru.requestRepository.FindAllByOrgID(ctx, orgKey, orgID, true)
 }
 
@@ -261,68 +259,66 @@ func (ru *requestUsecase) GetNewOrgRequests(ctx context.Context, orgKey string, 
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, "New", true)
+	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, string(model.ReqStatusNew), true)
 }
 
 func (ru *requestUsecase) GetApprovedOrgRequests(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, "Approved", true)
+	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, string(model.ReqStatusApproved), true)
 }
 
 func (ru *requestUsecase) GetAcceptedOrgRequests(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, "Accepted", true)
+	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, string(model.ReqStatusAccepted), true)
 }
 
 func (ru *requestUsecase) GetDeclinedOrgRequests(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, "Declined", true)
+	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, string(model.ReqStatusDeclined), true)
 }
 
 func (ru *requestUsecase) GetAuthorizedOrgRequests(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, "Authorized", true)
+	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, string(model.ReqStatusAuthorized), true)
 }
 
 func (ru *requestUsecase) GetDraftedOrgRequests(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, "Drafted", true)
+	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, string(model.ReqStatusDrafted), true)
 }
 
 func (ru *requestUsecase) GetRejectedOrgRequests(ctx context.Context, orgKey string, orgID primitive.ObjectID) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, "Rejected", true)
+	return ru.requestRepository.FindOrgByRequestStatus(ctx, orgID, orgKey, string(model.ReqStatusRejected), true)
 }
 
 func (ru *requestUsecase) GetRejectedRequests(ctx context.Context) ([]model.Request, error) {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
-	return ru.requestRepository.FindByRequestStatus(ctx, "Rejected", true)
+	return ru.requestRepository.FindByRequestStatus(ctx, string(model.ReqStatusRejected), true)
 }
 
 // Request operations
-
 func (ru *requestUsecase) AuthorizeOrgRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// 4. Create update object
@@ -334,7 +330,7 @@ func (ru *requestUsecase) AuthorizeOrgRequest(ctx context.Context, authUserID pr
 	now := time.Now()
 	forexRequest.AuthorizedAt = &now
 	forexRequest.AuthorizedBy = &authUserID
-	forexRequest.RequestStatus = "Authorized"
+	forexRequest.RequestStatus = string(model.ReqStatusAuthorized)
 
 	// Fetch sender
 	sender, err := ru.userRepository.FindByID(ctx, authUserID)
@@ -380,12 +376,11 @@ func (ru *requestUsecase) ValidateRequest(ctx context.Context, authUserID primit
 
 	forexRequest, err := ru.requestRepository.FindByID(ctx, request_id, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	if forexRequest.LockedBy != nil && *forexRequest.LockedBy != authUserID {
-		return errors.New("request is already locked by another user")
+		return common.ErrRequestIsLocked
 	}
 
 	forexRequest.ValidatedBy = &authUserID
@@ -394,7 +389,7 @@ func (ru *requestUsecase) ValidateRequest(ctx context.Context, authUserID primit
 	forexRequest.ValidatedCurrentBalance = &request.ValidatedCurrentBalance
 	forexRequest.ValidatedAverageDeposit = &request.ValidatedAverageDeposit
 	forexRequest.ValidatedAccountCurrencyID = &validated_account_currency_id
-	forexRequest.RequestStatus = "Validated"
+	forexRequest.RequestStatus = model.ReqStatusValidated
 
 	return ru.requestRepository.Validate(ctx, request_id, forexRequest)
 }
@@ -405,8 +400,7 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// Copy the data
@@ -414,7 +408,7 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 	copier.Copy(&forexRequest, existingRequest)
 
 	if forexRequest.LockedBy != nil && *forexRequest.LockedBy != authUserID {
-		return errors.New("request is already locked by another user")
+		return common.ErrRequestIsLocked
 	}
 
 	forexRequest.ApprovedBy = &authUserID
@@ -424,7 +418,7 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 	forexRequest.ApprovedAmounts = &request.ApprovedAmounts
 	forexRequest.ApprovedAmountInCash = &request.ApprovedAmountInCash
 	forexRequest.ApprovedAmountInCard = &request.ApprovedAmountInCard
-	forexRequest.RequestStatus = "Approved"
+	forexRequest.RequestStatus = string(model.ReqStatusApproved)
 
 	// Fetch sender
 	sender, err := ru.userRepository.FindByID(ctx, authUserID)
@@ -434,7 +428,7 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 
 	err = ru.requestRepository.Update(ctx, requestID, &forexRequest)
 	if err != nil {
-		return errors.New("failed to approve the request")
+		return err
 	}
 
 	to := append([]string{}, configs.MailRequestAuthorizedTo...)
@@ -469,12 +463,11 @@ func (ru *requestUsecase) DeleteRequest(ctx context.Context, authUserID primitiv
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
-	if existingRequest.RequestStatus != "Drafted" {
-		return errors.New("This request cannot be deleted")
+	if existingRequest.RequestStatus != model.ReqStatusDrafted {
+		return common.ErrRequestCannotBeDeleted
 	}
 
 	// Copy the data
@@ -485,7 +478,7 @@ func (ru *requestUsecase) DeleteRequest(ctx context.Context, authUserID primitiv
 	forexRequest.DeletedAt = &now
 	forexRequest.DeletedBy = &authUserID
 	forexRequest.IsDeleted = true
-	forexRequest.RequestStatus = "Deleted"
+	forexRequest.RequestStatus = string(model.ReqStatusDrafted)
 
 	return ru.requestRepository.Update(ctx, requestID, &forexRequest)
 }
@@ -496,8 +489,7 @@ func (ru *requestUsecase) SendRequest(ctx context.Context, authUserID primitive.
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// Fetch sender
@@ -513,7 +505,7 @@ func (ru *requestUsecase) SendRequest(ctx context.Context, authUserID primitive.
 	now := time.Now()
 	forexRequest.RequestedAt = &now
 	forexRequest.RequestedBy = &authUserID
-	forexRequest.RequestStatus = "New"
+	forexRequest.RequestStatus = string(model.ReqStatusNew)
 
 	// First update DB
 	err = ru.requestRepository.Update(ctx, requestID, &forexRequest)
@@ -565,8 +557,7 @@ func (ru *requestUsecase) DeclineOrgRequest(ctx context.Context, authUserID prim
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// Copy the data
@@ -576,7 +567,7 @@ func (ru *requestUsecase) DeclineOrgRequest(ctx context.Context, authUserID prim
 	now := time.Now()
 	forexRequest.DeclinedAt = &now
 	forexRequest.DeclinedBy = &authUserID
-	forexRequest.RequestStatus = "Declined"
+	forexRequest.RequestStatus = string(model.ReqStatusDeclined)
 
 	// // Then send email (fail-safe)
 	// subject := "Foreign Currency Request Rejected"
@@ -598,18 +589,17 @@ func (ru *requestUsecase) RejectRequest(ctx context.Context, authUserID primitiv
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	existingUser, err := ru.userRepository.FindByID(ctx, authUserID)
 	if err != nil {
-		return errors.New("unathorized access, unable to reject the request")
+		return common.ErrUnauthorized
 	}
 
 	if existingUser.Role.Name == "BRANCH_AUTHORIZER" {
 		if existingUser.Profile.BranchID != existingRequest.BranchID && existingUser.Profile.DepartmentID != existingRequest.DepartmentID {
-			return errors.New("unauthorized, you are not allowed to reject the request")
+			return common.ErrUnauthorized
 		}
 	}
 
@@ -618,18 +608,18 @@ func (ru *requestUsecase) RejectRequest(ctx context.Context, authUserID primitiv
 	copier.Copy(&forexRequest, existingRequest)
 
 	if forexRequest.LockedBy != nil && *forexRequest.LockedBy != authUserID {
-		return errors.New("request is already locked by another user")
+		return common.ErrRequestIsLocked
 	}
 
 	now := time.Now()
 	forexRequest.RejectedAt = &now
 	forexRequest.RejectedBy = &authUserID
 	forexRequest.RejectionReason = rejection_reason
-	forexRequest.RequestStatus = "Rejected"
+	forexRequest.RequestStatus = string(model.ReqStatusRejected)
 
 	err = ru.requestRepository.Update(ctx, requestID, &forexRequest)
 	if err != nil {
-		return errors.New("failed to reject the request")
+		return err
 	}
 
 	// Fetch sender
@@ -681,8 +671,7 @@ func (ru *requestUsecase) LockRequest(ctx context.Context, authUserID primitive.
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// Copy the data
@@ -691,7 +680,7 @@ func (ru *requestUsecase) LockRequest(ctx context.Context, authUserID primitive.
 
 	// If already locked by someone else
 	if forexRequest.LockedBy != nil && *forexRequest.LockedBy != authUserID {
-		return errors.New("request is already locked by another user")
+		return common.ErrRequestIsLocked
 	}
 
 	now := time.Now()
@@ -709,8 +698,7 @@ func (ru *requestUsecase) UnLockRequest(ctx context.Context, authUserID primitiv
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// Copy the data
@@ -718,14 +706,12 @@ func (ru *requestUsecase) UnLockRequest(ctx context.Context, authUserID primitiv
 	copier.Copy(&forexRequest, existingRequest)
 
 	if forexRequest.LockedBy != nil && *forexRequest.LockedBy != authUserID {
-		return errors.New("request is already locked by another user")
+		return common.ErrRequestIsLocked
 	}
 
 	forexRequest.LockedAt = nil
 	forexRequest.LockedBy = nil
 	forexRequest.LockExpiresAt = nil
-
-	fmt.Println("unlocked", forexRequest.LockedBy)
 
 	return ru.requestRepository.Update(ctx, requestID, &forexRequest)
 }
@@ -736,8 +722,7 @@ func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitiv
 
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
-		fmt.Println("the request_id doesn't exist")
-		return errors.New("the request id doesn't exist")
+		return common.ErrRequestNotFound
 	}
 
 	// Copy the data
@@ -747,7 +732,7 @@ func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitiv
 	now := time.Now()
 	forexRequest.AcceptedAt = &now
 	forexRequest.AcceptedBy = &authUserID
-	forexRequest.RequestStatus = "Accepted"
+	forexRequest.RequestStatus = string(model.ReqStatusAccepted)
 
 	return ru.requestRepository.Update(ctx, requestID, &forexRequest)
 }

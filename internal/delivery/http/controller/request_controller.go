@@ -72,7 +72,7 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 	userID, err := utils.GetUserID(c)
 	if err != nil {
 		logEntry.WithField("error", err.Error()).Warn("Invalid user ID")
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -251,7 +251,24 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 	err = rc.requestUsecase.AddRequest(c, userID, &fcyRequest)
 	if err != nil {
 		logEntry.WithField("error", err.Error()).Warn("Failed to add the request")
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrUnauthorized):
+			status = http.StatusUnauthorized
+			message = common.MessUnauthorized
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -272,7 +289,7 @@ func (rc *requestController) GetAllRequests(c *gin.Context) {
 func (rc *requestController) ValidateRequest(c *gin.Context) {
 	userID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -320,7 +337,26 @@ func (rc *requestController) ValidateRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.ValidateRequest(c, userID, requestObjID, validatedCurrencyObjID, &request)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInvalidRequestData, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -332,7 +368,7 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 	userID, err := utils.GetUserID(c)
 	if err != nil {
 		logEntry.WithField("error", err.Error()).Warn("Invalid user ID")
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -555,7 +591,31 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 	err = rc.requestUsecase.UpdateRequest(c, userID, requestID, &fcyRequest)
 	if err != nil {
 		logEntry.WithField("error", err.Error()).Warn("Failed to update the request")
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrUnauthorized):
+			status = http.StatusUnauthorized
+			message = common.MessUnauthorized
+
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -574,7 +634,7 @@ func getAmount(slice []float64, index int) float64 {
 func (rc *requestController) ApproveRequest(c *gin.Context) {
 	userID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -659,24 +719,42 @@ func (rc *requestController) ApproveRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.ApproveRequest(c, userID, requestObjID, &request)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request approved successfully"})
-
 }
 
 func (rc *requestController) GetAllOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -703,13 +781,13 @@ func (rc *requestController) GetAllOrgRequests(c *gin.Context) {
 func (rc *requestController) GetAuthorizedRequests(c *gin.Context) {
 	_, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	_, err = utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -725,13 +803,13 @@ func (rc *requestController) GetAuthorizedRequests(c *gin.Context) {
 func (rc *requestController) GetNewOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -754,7 +832,6 @@ func (rc *requestController) GetNewOrgRequests(c *gin.Context) {
 
 	newOrgRequests, err = rc.requestUsecase.GetNewOrgRequests(c, orgKey, orgID)
 	if err != nil {
-
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
@@ -765,13 +842,13 @@ func (rc *requestController) GetNewOrgRequests(c *gin.Context) {
 func (rc *requestController) GetRejectedOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -794,7 +871,6 @@ func (rc *requestController) GetRejectedOrgRequests(c *gin.Context) {
 
 	newOrgRequests, err = rc.requestUsecase.GetRejectedOrgRequests(c, orgKey, orgID)
 	if err != nil {
-
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
@@ -815,13 +891,13 @@ func (rc *requestController) GetRejectedRequests(c *gin.Context) {
 func (rc *requestController) GetApprovedOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -854,13 +930,13 @@ func (rc *requestController) GetApprovedOrgRequests(c *gin.Context) {
 func (rc *requestController) GetAcceptedOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -894,13 +970,13 @@ func (rc *requestController) GetAcceptedOrgRequests(c *gin.Context) {
 func (rc *requestController) GetDeclinedOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -923,7 +999,6 @@ func (rc *requestController) GetDeclinedOrgRequests(c *gin.Context) {
 
 	orgRequests, err = rc.requestUsecase.GetDeclinedOrgRequests(c, orgKey, orgID)
 	if err != nil {
-
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
@@ -934,13 +1009,13 @@ func (rc *requestController) GetDeclinedOrgRequests(c *gin.Context) {
 func (rc *requestController) GetAuthorizedOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -963,7 +1038,6 @@ func (rc *requestController) GetAuthorizedOrgRequests(c *gin.Context) {
 
 	orgRequests, err = rc.requestUsecase.GetAuthorizedOrgRequests(c, orgKey, orgID)
 	if err != nil {
-
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
@@ -974,13 +1048,13 @@ func (rc *requestController) GetAuthorizedOrgRequests(c *gin.Context) {
 func (rc *requestController) GetDraftedOrgRequests(c *gin.Context) {
 	departmentID, err := utils.GetDepartmentID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	branchID, err := utils.GetBranchID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -1003,7 +1077,6 @@ func (rc *requestController) GetDraftedOrgRequests(c *gin.Context) {
 
 	orgRequests, err = rc.requestUsecase.GetDraftedOrgRequests(c, orgKey, orgID)
 	if err != nil {
-
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
@@ -1014,14 +1087,14 @@ func (rc *requestController) GetDraftedOrgRequests(c *gin.Context) {
 func (rc *requestController) AuthorizeOrgRequest(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	// get user id from param
 	requestID := c.Param("id")
 	if requestID == "" {
-		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnathorized, Error: "request ID is required"})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "request ID is required"})
 		return
 	}
 
@@ -1033,7 +1106,22 @@ func (rc *requestController) AuthorizeOrgRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.AuthorizeOrgRequest(c, authUserID, requestObjID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -1043,14 +1131,14 @@ func (rc *requestController) AuthorizeOrgRequest(c *gin.Context) {
 func (rc *requestController) RejectRequest(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
 	// get user id from param
 	requestIDStr := c.Param("id")
 	if requestIDStr == "" {
-		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnathorized, Error: "request ID is required"})
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "request ID is required"})
 		return
 	}
 
@@ -1083,7 +1171,30 @@ func (rc *requestController) RejectRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.RejectRequest(c, authUserID, requestID, payload.RejectionReason)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrUnauthorized):
+			status = http.StatusUnauthorized
+			message = common.MessUnauthorized
+
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -1093,7 +1204,7 @@ func (rc *requestController) RejectRequest(c *gin.Context) {
 func (rc *requestController) DeleteRequest(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -1112,7 +1223,26 @@ func (rc *requestController) DeleteRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.DeleteRequest(c, authUserID, requestID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestCannotBeDeleted):
+			status = http.StatusForbidden
+			message = "You are not allowed to delete the request"
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -1122,7 +1252,7 @@ func (rc *requestController) DeleteRequest(c *gin.Context) {
 func (rc *requestController) AcceptRequest(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -1141,7 +1271,22 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.AcceptRequest(c, authUserID, requestID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -1170,7 +1315,22 @@ func (rc *requestController) SendRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.SendRequest(c, authUserID, requestID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -1180,7 +1340,7 @@ func (rc *requestController) SendRequest(c *gin.Context) {
 func (rc *requestController) DeclineOrgRequest(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -1199,7 +1359,22 @@ func (rc *requestController) DeclineOrgRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.DeclineOrgRequest(c, authUserID, requestID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -1249,7 +1424,7 @@ func (rc *requestController) GetDeclinedRequests(c *gin.Context) {
 func (rc *requestController) LockRequest(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -1268,7 +1443,26 @@ func (rc *requestController) LockRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.LockRequest(c, authUserID, requestID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 
@@ -1279,7 +1473,7 @@ func (rc *requestController) UnLockRequest(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -1298,7 +1492,26 @@ func (rc *requestController) UnLockRequest(c *gin.Context) {
 
 	err = rc.requestUsecase.UnLockRequest(c, authUserID, requestID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		var (
+			status  int
+			message string
+		)
+
+		switch {
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		default:
+			status = http.StatusInternalServerError
+			message = common.MessInternalServerError
+		}
+
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
 		return
 	}
 

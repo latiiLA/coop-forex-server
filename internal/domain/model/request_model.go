@@ -8,6 +8,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type RequestStatus string
+
+const (
+	ReqStatusDrafted    RequestStatus = "Drafted"
+	ReqStatusNew        RequestStatus = "New"
+	ReqStatusAuthorized RequestStatus = "Authorized"
+	ReqStatusValidated  RequestStatus = "Validated"
+	ReqStatusRejected   RequestStatus = "Rejected"
+	ReqStatusApproved   RequestStatus = "Approved"
+	ReqStatusAccepted   RequestStatus = "Accepted"
+	ReqStatusDeclined   RequestStatus = "Declined"
+	ReqStatusDeleted    RequestStatus = "Deleted"
+)
+
 type Request struct {
 	ID                     primitive.ObjectID  `json:"_id" bson:"_id,omitempty"`
 	BranchID               *primitive.ObjectID `json:"branch_id,omitempty" bson:"branch_id,omitempty"`
@@ -67,11 +81,11 @@ type Request struct {
 	AcceptanceStatus     *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
 
 	// Status & remarks
-	RequestStatus   string     `json:"request_status" bson:"request_status"`
-	Remark          string     `json:"remark,omitempty" bson:"remark,omitempty"`
-	RejectionReason string     `json:"rejection_reason,omitempty" bson:"rejection_reason,omitempty"`
-	ProcessedAmount *float64   `json:"processed_amount,omitempty" bson:"processed_amount,omitempty"`
-	DueDate         *time.Time `json:"due_date,omitempty" bson:"due_date,omitempty"`
+	RequestStatus   RequestStatus `json:"request_status" bson:"request_status"`
+	Remark          string        `json:"remark,omitempty" bson:"remark,omitempty"`
+	RejectionReason string        `json:"rejection_reason,omitempty" bson:"rejection_reason,omitempty"`
+	ProcessedAmount *float64      `json:"processed_amount,omitempty" bson:"processed_amount,omitempty"`
+	DueDate         *time.Time    `json:"due_date,omitempty" bson:"due_date,omitempty"`
 
 	// Audit
 	CreatedAt    time.Time  `json:"created_at" bson:"created_at"`
