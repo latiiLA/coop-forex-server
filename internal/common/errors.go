@@ -18,12 +18,21 @@ var (
 	ErrRoleNotFound          = errors.New("role not found")
 	ErrRoleNameAlreadyExists = errors.New("role with this name already exists")
 	ErrRoleNameNotAllowed    = errors.New("role name not allowed")
+
+	ErrUnauthorized   = errors.New("unauthorized")
+	ErrInternalServer = errors.New("internal server error")
+
+	ErrRequestNotFound        = errors.New("request not found")
+	ErrRequestIsLocked        = errors.New("request is already locked by another user")
+	ErrRequestCannotBeDeleted = errors.New("request cannot be deleted")
 )
 
 var (
 	MessInternalServerError = "Internal server error"
-	MessUnathorized         = "Unathorized"
+	MessUnauthorized        = "Unauthorized"
 	MessInvalidRequest      = "Invalid request"
 	MessInvalidRequestData  = "Invalid request data"
 	MessInvalidRequestFile  = "Invalid request data"
+	MessRequestLocked       = "Request is Locked by someone else"
+	MessRequestNotFound     = "Request not found"
 )
