@@ -17,19 +17,19 @@ func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
 		// Check Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: "Unathorized"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: "Unathorized"})
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		clientIP, err := utils.GetIPAddress(c)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: "unauthorized"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: "unauthorized"})
 			return
 		}
 
 		claims, err := infrastructure.ValidateToken(token, clientIP)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: "Invalid token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: "Invalid token"})
 			return
 		}
 
@@ -49,7 +49,7 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 		logEntry.Info("inside auth role and permission")
 		roleValue, exists := c.Get("role")
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusForbidden, response.Status{Message: common.MessUnathorized, Error: "Role not found"})
+			c.AbortWithStatusJSON(http.StatusForbidden, response.Status{Message: common.MessUnauthorized, Error: "Role not found"})
 			return
 		}
 
@@ -57,26 +57,26 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 		clientIP, err := utils.GetIPAddress(c)
 		if err != nil {
 			logEntry.WithField("error", err.Error()).Warn("invalid ip address")
-			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnathorized, Error: "cannot determine client IP"})
+			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "cannot determine client IP"})
 			return
 		}
 
 		tokenClaimIP, err := utils.GetClaimIpAddress(c)
 		if err != nil {
 			logEntry.WithField("error", err.Error()).Warn("invalid token ip address", tokenClaimIP)
-			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnathorized, Error: "cannot determine token IP"})
+			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "cannot determine token IP"})
 			return
 		}
 
 		if tokenClaimIP != clientIP {
 			logEntry.Warn("trying from different ip")
-			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnathorized, Error: "your network has been changed. please relogin"})
+			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "your network has been changed. please relogin"})
 			return
 		}
 
 		role, ok := roleValue.(string)
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{Message: common.MessUnathorized, Error: "Invalid role format"})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{Message: common.MessUnauthorized, Error: "Invalid role format"})
 			return
 		}
 

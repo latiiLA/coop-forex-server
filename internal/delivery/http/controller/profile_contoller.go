@@ -34,7 +34,7 @@ func NewProfileController(profileUsecase usecase.ProfileUsecase, userUsecase use
 func (pc *profileController) GetProfileByID(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -62,7 +62,7 @@ func (pc *profileController) GetProfileByID(c *gin.Context) {
 func (pc *profileController) UpdateProfileByID(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 

@@ -150,7 +150,7 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 
 	if err != nil {
 		logEntry.WithField("error", err.Error()).Warn("user update failed")
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -238,7 +238,7 @@ func (ac *userController) RefreshToken(c *gin.Context) {
 	access_token, refresh_token, err := ac.userUsecase.RefreshToken(c, refreshInput, clientIP)
 	if err != nil {
 		logrus.Error("invalid token", err)
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: "Invalid or expired token"})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: "Invalid or expired token"})
 		return
 	}
 

@@ -37,7 +37,7 @@ func NewRoleController(roleUsecase usecase.RoleUsecase) RoleController {
 func (rc *roleController) AddRole(c *gin.Context) {
 	userID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
@@ -162,7 +162,7 @@ func (rc *roleController) UpdateRole(c *gin.Context) {
 func (rc *roleController) DeleteRole(c *gin.Context) {
 	authUserID, err := utils.GetUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnathorized, Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
