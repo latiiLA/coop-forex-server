@@ -73,12 +73,18 @@ type Request struct {
 	ValidatedCurrentBalance    *float64            `json:"validated_current_balance,omitempty" bson:"validated_current_balance,omitempty"`
 
 	// Approved Fields
-	ApprovedCurrencyIDs  *[]primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
-	ApprovedCurrencies   *[]Currency           `json:"approved_currencies,omitempty" bson:"approved_currencies,omitempty"`
-	ApprovedAmounts      *[]float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
-	ApprovedAmountInCash *[]float64            `json:"approved_amount_in_cash,omitempty" bson:"approved_amount_in_cash,omitempty"`
-	ApprovedAmountInCard *[]float64            `json:"approved_amount_in_card,omitempty" bson:"approved_amount_in_card,omitempty"`
-	AcceptanceStatus     *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
+	ApprovedCurrencyIDs  []primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
+	ApprovedCurrencies   []Currency           `json:"approved_currencies,omitempty" bson:"approved_currencies,omitempty"`
+	ApprovedAmounts      []float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
+	ApprovedAmountInCash []float64            `json:"approved_amount_in_cash,omitempty" bson:"approved_amount_in_cash,omitempty"`
+	ApprovedAmountInCard []float64            `json:"approved_amount_in_card,omitempty" bson:"approved_amount_in_card,omitempty"`
+
+	// Accepted Fields
+	AcceptedCurrencyIDs  []primitive.ObjectID `json:"accepted_currency_ids,omitempty" bson:"accepted_currency_ids,omitempty"`
+	AcceptedCurrencies   []Currency           `json:"accepted_currencies,omitempty" bson:"accepted_currencies,omitempty"`
+	AcceptedAmounts      []float64            `json:"accepted_amounts,omitempty" bson:"accepted_amounts,omitempty"`
+	AcceptedAmountInCash []float64            `json:"accepted_amount_in_cash,omitempty" bson:"accepted_amount_in_cash,omitempty"`
+	AcceptedAmountInCard []float64            `json:"accepted_amount_in_card,omitempty" bson:"accepted_amount_in_card,omitempty"`
 
 	// Status & remarks
 	RequestStatus   RequestStatus `json:"request_status" bson:"request_status"`
@@ -160,11 +166,15 @@ type RequestUpdate struct {
 	ValidatedCurrentBalance    *float64            `json:"validated_current_balance,omitempty" bson:"validated_current_balance,omitempty"`
 
 	// Approved Fields
-	ApprovedCurrencyIDs  *[]primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
-	ApprovedAmounts      *[]float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
-	ApprovedAmountInCash *[]float64            `json:"approved_amount_in_cash,omitempty" bson:"approved_amount_in_cash,omitempty"`
-	ApprovedAmountInCard *[]float64            `json:"approved_amount_in_card,omitempty" bson:"approved_amount_in_card,omitempty"`
-	AcceptanceStatus     *string               `json:"acceptance_status,omitempty" bson:"acceptance_status,omitempty"`
+	ApprovedCurrencyIDs  []primitive.ObjectID `json:"approved_currency_ids,omitempty" bson:"approved_currency_ids,omitempty"`
+	ApprovedAmounts      []float64            `json:"approved_amounts,omitempty" bson:"approved_amounts,omitempty"`
+	ApprovedAmountInCash []float64            `json:"approved_amount_in_cash,omitempty" bson:"approved_amount_in_cash,omitempty"`
+	ApprovedAmountInCard []float64            `json:"approved_amount_in_card,omitempty" bson:"approved_amount_in_card,omitempty"`
+
+	AcceptedCurrencyIDs  []primitive.ObjectID `json:"accepted_currency_ids,omitempty" bson:"accepted_currency_ids,omitempty"`
+	AcceptedAmounts      []float64            `json:"accepted_amounts,omitempty" bson:"accepted_amounts,omitempty"`
+	AcceptedAmountInCash []float64            `json:"accepted_amount_in_cash,omitempty" bson:"accepted_amount_in_cash,omitempty"`
+	AcceptedAmountInCard []float64            `json:"accepted_amount_in_card,omitempty" bson:"accepted_amount_in_card,omitempty"`
 
 	// Status & remarks
 	RequestStatus   string     `json:"request_status" bson:"request_status"`
@@ -265,9 +275,16 @@ type RequestValidationDTO struct {
 
 type RequestApprovalDTO struct {
 	ApprovedCurrencyIDs  []primitive.ObjectID `json:"approved_currency_ids" binding:"required"`
-	ApprovedAmounts      []float64            `json:"approved_amounts" binding:"required,dive,gt=0"`
-	ApprovedAmountInCash []float64            `json:"approved_amount_in_cash" binding:"required,dive,gt=0"`
-	ApprovedAmountInCard []float64            `json:"approved_amount_in_card" binding:"required,dive,gt=0"`
+	ApprovedAmounts      []float64            `json:"approved_amounts" binding:"required,dive,gte=0"`
+	ApprovedAmountInCash []float64            `json:"approved_amount_in_cash" binding:"required,dive,gte=0"`
+	ApprovedAmountInCard []float64            `json:"approved_amount_in_card" binding:"required,dive,gte=0"`
+}
+
+type RequestAcceptanceDTO struct {
+	AcceptedCurrencyIDs  []primitive.ObjectID `json:"accepted_currency_ids" binding:"required"`
+	AcceptedAmounts      []float64            `json:"accepted_amounts" binding:"required,dive,gte=0"`
+	AcceptedAmountInCash []float64            `json:"accepted_amount_in_cash" binding:"required,dive,gte=0"`
+	AcceptedAmountInCard []float64            `json:"accepted_amount_in_card" binding:"required,dive,gte=0"`
 }
 
 // Internal model with ObjectIDs

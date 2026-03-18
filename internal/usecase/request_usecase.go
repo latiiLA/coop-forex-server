@@ -38,7 +38,7 @@ type RequestUsecase interface {
 	UnLockRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error
 
 	DeleteRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error
-	AcceptRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error
+	AcceptRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID, request *model.RequestAcceptanceDTO) error
 	SendRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error
 	DeclineOrgRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error
 
@@ -414,10 +414,10 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 	forexRequest.ApprovedBy = &authUserID
 	now := time.Now()
 	forexRequest.ApprovedAt = &now
-	forexRequest.ApprovedCurrencyIDs = &request.ApprovedCurrencyIDs
-	forexRequest.ApprovedAmounts = &request.ApprovedAmounts
-	forexRequest.ApprovedAmountInCash = &request.ApprovedAmountInCash
-	forexRequest.ApprovedAmountInCard = &request.ApprovedAmountInCard
+	forexRequest.ApprovedCurrencyIDs = request.ApprovedCurrencyIDs
+	forexRequest.ApprovedAmounts = request.ApprovedAmounts
+	forexRequest.ApprovedAmountInCash = request.ApprovedAmountInCash
+	forexRequest.ApprovedAmountInCard = request.ApprovedAmountInCard
 	forexRequest.RequestStatus = string(model.ReqStatusApproved)
 
 	// Fetch sender
@@ -597,7 +597,7 @@ func (ru *requestUsecase) RejectRequest(ctx context.Context, authUserID primitiv
 		return common.ErrUnauthorized
 	}
 
-	if existingUser.Role.Name == "BRANCH_AUTHORIZER" {
+	if existingUser.Role.Name == "BRANCHAUTHORIZER" {
 		if existingUser.Profile.BranchID != existingRequest.BranchID && existingUser.Profile.DepartmentID != existingRequest.DepartmentID {
 			return common.ErrUnauthorized
 		}
@@ -716,7 +716,7 @@ func (ru *requestUsecase) UnLockRequest(ctx context.Context, authUserID primitiv
 	return ru.requestRepository.Update(ctx, requestID, &forexRequest)
 }
 
-func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID) error {
+func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitive.ObjectID, requestID primitive.ObjectID, request *model.RequestAcceptanceDTO) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
 
@@ -725,13 +725,35 @@ func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitiv
 		return common.ErrRequestNotFound
 	}
 
+	for i := range existingRequest.ApprovedAmounts {
+		if existingRequest.ApprovedCurrencyIDs[i] != request.AcceptedCurrencyIDs[i] ||
+			existingRequest.ApprovedAmountInCard[i] != request.AcceptedAmountInCard[i] ||
+			existingRequest.ApprovedAmountInCash[i] != request.AcceptedAmountInCash[i] {
+			return common.ErrInvalidAcceptedCurrency
+		}
+
+		if existingRequest.ApprovedAmounts[i] < request.AcceptedAmounts[i] ||
+			existingRequest.ApprovedAmountInCard[i] < request.AcceptedAmountInCard[i] ||
+			existingRequest.ApprovedAmountInCash[i] < request.AcceptedAmountInCash[i] {
+			return common.ErrInvalidAcceptedAmount
+		}
+	}
+
 	// Copy the data
 	forexRequest := model.RequestUpdate{}
 	copier.Copy(&forexRequest, existingRequest)
 
+	if forexRequest.LockedBy != nil && *forexRequest.LockedBy != authUserID {
+		return common.ErrRequestIsLocked
+	}
+
 	now := time.Now()
 	forexRequest.AcceptedAt = &now
 	forexRequest.AcceptedBy = &authUserID
+	forexRequest.AcceptedCurrencyIDs = request.AcceptedCurrencyIDs
+	forexRequest.AcceptedAmounts = request.AcceptedAmounts
+	forexRequest.AcceptedAmountInCash = request.AcceptedAmountInCash
+	forexRequest.AcceptedAmountInCard = request.AcceptedAmountInCard
 	forexRequest.RequestStatus = string(model.ReqStatusAccepted)
 
 	return ru.requestRepository.Update(ctx, requestID, &forexRequest)

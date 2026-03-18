@@ -22,9 +22,11 @@ var (
 	ErrUnauthorized   = errors.New("unauthorized")
 	ErrInternalServer = errors.New("internal server error")
 
-	ErrRequestNotFound        = errors.New("request not found")
-	ErrRequestIsLocked        = errors.New("request is already locked by another user")
-	ErrRequestCannotBeDeleted = errors.New("request cannot be deleted")
+	ErrRequestNotFound         = errors.New("request not found")
+	ErrRequestIsLocked         = errors.New("request is already locked by another user")
+	ErrRequestCannotBeDeleted  = errors.New("request cannot be deleted")
+	ErrInvalidAcceptedAmount   = errors.New("accepted amount cannot be greater than approved amount")
+	ErrInvalidAcceptedCurrency = errors.New("accepted currency must be the same approved currency amount")
 )
 
 var (

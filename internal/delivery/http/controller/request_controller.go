@@ -1280,6 +1280,96 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 		return
 	}
 
+	var request model.RequestAcceptanceDTO
+	if err := c.ShouldBind(&request); err != nil {
+		var ve validator.ValidationErrors
+		if errors.As(err, &ve) {
+			hasAmountError := false
+
+			for _, fe := range ve {
+				if fe.Tag() == "gt" &&
+					(strings.HasPrefix(fe.Field(), "AcceptedAmounts") ||
+						strings.HasPrefix(fe.Field(), "AcceptedAmountInCash") ||
+						strings.HasPrefix(fe.Field(), "AcceptedAmountInCard")) {
+					hasAmountError = true
+					break
+				}
+			}
+
+			if hasAmountError {
+				c.JSON(http.StatusBadRequest, response.Status{
+					Message: "Accepted amount must be greater than 0",
+					Error:   "Accepted amount must be greater than 0",
+				})
+				return
+			}
+
+			// fallback for other validation errors
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: "Validation failed",
+				Error:   "validation failed",
+			})
+			return
+		}
+
+		// fallback for non-validator errors
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   err.Error(),
+		})
+		return
+
+	}
+
+	length := len(request.AcceptedAmounts)
+
+	if length != len(request.AcceptedAmountInCash) ||
+		length != len(request.AcceptedAmountInCard) ||
+		length != len(request.AcceptedCurrencyIDs) {
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: "All accepted arrays must have the same length",
+			Error:   "All accepted arrays must have the same length",
+		})
+		return
+	}
+
+	// Check no accepted amount is 0 or negative
+	for i, amt := range request.AcceptedAmounts {
+		if amt <= 0 {
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: fmt.Sprintf("Total accepted amount at index %d must be greater than 0", i),
+				Error:   "Total accepted amount must be greater than 0",
+			})
+			return
+		}
+	}
+
+	for i := range request.AcceptedAmounts {
+		cash := 0.0
+		card := 0.0
+
+		if i < len(request.AcceptedAmountInCash) {
+			cash = request.AcceptedAmountInCash[i]
+		}
+
+		if i < len(request.AcceptedAmountInCard) {
+			card = request.AcceptedAmountInCard[i]
+		}
+
+		total := cash + card
+
+		if total != request.AcceptedAmounts[i] {
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: fmt.Sprintf(
+					"Accepted amount at index %d must equal cash + card (%.2f + %.2f = %.2f)",
+					i, cash, card, total,
+				),
+			})
+			return
+		}
+	}
+
 	// get user id from param
 	requestIDStr := c.Param("id")
 	if requestIDStr == "" {
@@ -1293,7 +1383,7 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 		return
 	}
 
-	err = rc.requestUsecase.AcceptRequest(c, authUserID, requestID)
+	err = rc.requestUsecase.AcceptRequest(c, authUserID, requestID, &request)
 	if err != nil {
 		var (
 			status  int
@@ -1304,6 +1394,14 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestNotFound):
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrInvalidAcceptedCurrency):
+			status = http.StatusBadRequest
+			message = "Accepted currency must be the same as approved currency"
+
+		case errors.Is(err, common.ErrInvalidAcceptedAmount):
+			status = http.StatusBadRequest
+			message = "Accepted amount cannot be greater than approved amount"
 
 		default:
 			status = http.StatusInternalServerError
@@ -1539,5 +1637,5 @@ func (rc *requestController) UnLockRequest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "request unlock successful"})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request unlock successful"})
 }
