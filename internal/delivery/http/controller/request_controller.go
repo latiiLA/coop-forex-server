@@ -679,6 +679,30 @@ func (rc *requestController) ApproveRequest(c *gin.Context) {
 
 	}
 
+	length := len(request.ApprovedAmounts)
+
+	if length != len(request.ApprovedAmountInCash) ||
+		length != len(request.ApprovedAmountInCard) ||
+		length != len(request.ApprovedCurrencyIDs) {
+
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: "All approved arrays must have the same length",
+			Error:   "All approved arrays must have the same length",
+		})
+		return
+	}
+
+	// Check no approved amount is 0 or negative
+	for i, amt := range request.ApprovedAmounts {
+		if amt <= 0 {
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: fmt.Sprintf("Total approved amount at index %d must be greater than 0", i),
+				Error:   "Total approved amount must be greater than 0",
+			})
+			return
+		}
+	}
+
 	for i := range request.ApprovedAmounts {
 		cash := 0.0
 		card := 0.0
