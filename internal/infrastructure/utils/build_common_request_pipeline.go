@@ -44,6 +44,25 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		}},
 	})
 
+	pipeline = append(pipeline, bson.D{
+		{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "currencies"},
+			{Key: "let", Value: bson.D{
+				{Key: "currency_ids", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$accepted_currency_ids", bson.A{}}}}},
+			}},
+			{Key: "pipeline", Value: mongo.Pipeline{
+				{
+					{Key: "$match", Value: bson.D{
+						{Key: "$expr", Value: bson.D{
+							{Key: "$in", Value: bson.A{"$_id", "$$currency_ids"}},
+						}},
+					}},
+				},
+			}},
+			{Key: "as", Value: "accepted_currencies"},
+		}},
+	})
+
 	// Populate users/profiles if requested
 	if populate {
 		pipeline = append(pipeline, LookupUserWithProfile("created_by", "creator")...)
@@ -107,6 +126,10 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		{Key: "approved_amount_in_cash", Value: 1},
 		{Key: "approved_amount_in_card", Value: 1},
 
+		{Key: "accepted_amounts", Value: 1},
+		{Key: "accepted_amount_in_cash", Value: 1},
+		{Key: "accepted_amount_in_card", Value: 1},
+
 		{Key: "created_by", Value: 1},
 		{Key: "requested_by", Value: 1},
 		{Key: "authorized_by", Value: 1},
@@ -163,6 +186,7 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		project = append(project, bson.E{Key: "fcy_requested", Value: 1})
 		project = append(project, bson.E{Key: "validated_account_currency", Value: 1})
 		project = append(project, bson.E{Key: "approved_currencies", Value: 1})
+		project = append(project, bson.E{Key: "accepted_currencies", Value: 1})
 
 		// File attachments
 		project = append(project, bson.E{Key: "passport", Value: 1})
