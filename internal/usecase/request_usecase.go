@@ -726,9 +726,7 @@ func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitiv
 	}
 
 	for i := range existingRequest.ApprovedAmounts {
-		if existingRequest.ApprovedCurrencyIDs[i] != request.AcceptedCurrencyIDs[i] ||
-			existingRequest.ApprovedAmountInCard[i] != request.AcceptedAmountInCard[i] ||
-			existingRequest.ApprovedAmountInCash[i] != request.AcceptedAmountInCash[i] {
+		if existingRequest.ApprovedCurrencyIDs[i] != request.AcceptedCurrencyIDs[i] {
 			return common.ErrInvalidAcceptedCurrency
 		}
 
