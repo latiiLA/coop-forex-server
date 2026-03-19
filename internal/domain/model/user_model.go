@@ -48,9 +48,9 @@ type RegisterRequestDTO struct {
 	MiddleName   string              `json:"middle_name" binding:"required,min=3,max=50,alphaunicode"`
 	LastName     string              `json:"last_name" binding:"required,min=3,max=50,alphaunicode"`
 	Permissions  []string            `json:"permissions"`
-	Role         primitive.ObjectID  `json:"role" binding:"required,len=24,hexadecimal"`
-	DepartmentID *primitive.ObjectID `json:"department" binding:"omitempty,len=24,hexadecimal"`
-	BranchID     *primitive.ObjectID `json:"branch" binding:"omitempty,len=24,hexadecimal"`
+	Role         primitive.ObjectID  `json:"role" binding:"required"`
+	DepartmentID *primitive.ObjectID `json:"department" binding:"omitempty"`
+	BranchID     *primitive.ObjectID `json:"branch" binding:"omitempty"`
 }
 
 type RegisterUsecaseRequestDTO struct {
