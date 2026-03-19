@@ -214,7 +214,7 @@ type RequestUpdate struct {
 }
 
 type RequestDTO struct {
-	ApplicantName          string   `form:"applicant_name" binding:"required,alphanum,excludesall=<>"`
+	ApplicantName          string   `form:"applicant_name" binding:"required,excludesall=<>"`
 	ApplicantAccountNumber string   `form:"applicant_account_number" binding:"required,alphanum"`
 	AverageDeposit         string   `form:"average_deposit" binding:"required,alphanum"`
 	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required,alphanum"`
@@ -226,9 +226,9 @@ type RequestDTO struct {
 	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,alphanum,len=24"`
 	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,alphanum"`
 	AccountsToDeduct       []string `form:"accounts_to_deduct" binding:"required,min=1,dive,required,alphanum"`
-	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required,alphanum"`
+	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required"`
 	CardAssociatedAccount  string   `form:"card_associated_account" binding:"omitempty,alphanum"`
-	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,min=3,max=50,alphanum,excludesall=<>"`
+	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,min=3,max=50,excludesall=<>"`
 
 	// Attachments (must use `*multipart.FileHeader`)
 	PassportAttachment           *multipart.FileHeader `form:"passport_attachment"`
@@ -241,7 +241,7 @@ type RequestDTO struct {
 }
 
 type UpdateRequestDTO struct {
-	ApplicantName          string   `form:"applicant_name" binding:"required,alphanum,excludesall=<>"`
+	ApplicantName          string   `form:"applicant_name" binding:"required,excludesall=<>"`
 	ApplicantAccountNumber string   `form:"applicant_account_number" binding:"required,alphanum"`
 	AverageDeposit         string   `form:"average_deposit" binding:"required,alphanum,gte=0"`
 	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required,alphanum,gte=0"`
@@ -253,9 +253,9 @@ type UpdateRequestDTO struct {
 	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,alphanum,len=24"`
 	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,alphanum,gt=0"`
 	AccountsToDeduct       []string `form:"accounts_to_deduct" binding:"required,min=1,dive,required,alphanum"`
-	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required,alphanum"`
+	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required"`
 	CardAssociatedAccount  string   `form:"card_associated_account" binding:"omitempty,alphanum"`
-	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,alphanum,excludesall=<>,gt=0"`
+	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,excludesall=<>,gt=0"`
 
 	// Attachments (must use `*multipart.FileHeader`)
 	PassportAttachment           *multipart.FileHeader `form:"passport_attachment"`
