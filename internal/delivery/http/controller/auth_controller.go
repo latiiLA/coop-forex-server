@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -68,17 +69,17 @@ func (a *authController) Login(c *gin.Context) {
 
 	log.WithFields(log.Fields{
 		"trace_id":   traceID,
-		"username":   req.Username,
+		"username":   strings.ToLower(req.Username),
 		"ip":         clientIP,
 		"user_agent": userAgent,
 	}).Info("Login attempt")
 
 	// Call the usecase to perform authentication
-	user, err := a.authUsecase.Authenticate(c, req.Username, req.Password, c.ClientIP())
+	user, err := a.authUsecase.Authenticate(c, strings.ToLower(req.Username), req.Password, c.ClientIP())
 	if err != nil {
 		log.WithFields(log.Fields{
 			"trace_id": traceID,
-			"username": req.Username,
+			"username": strings.ToLower(req.Username),
 			"ip":       clientIP,
 			"error":    err.Error(),
 		}).Warn("Login failed")
@@ -116,7 +117,7 @@ func (a *authController) Login(c *gin.Context) {
 
 	log.WithFields(log.Fields{
 		"trace_id": traceID,
-		"username": req.Username,
+		"username": strings.ToLower(req.Username),
 		"ip":       clientIP,
 	}).Info("Login successful")
 
@@ -154,7 +155,7 @@ func (a *authController) Register(c *gin.Context) {
 	}
 
 	// Call AuthUsecase (LDAP) ---
-	adUser, err := a.authUsecase.GetUserDetails(c.Request.Context(), registerReq.Username)
+	adUser, err := a.authUsecase.GetUserDetails(c.Request.Context(), strings.ToLower(registerReq.Username))
 	if err != nil {
 		logEntry.Warn("Get user detail from AD error: ", err)
 
@@ -173,7 +174,7 @@ func (a *authController) Register(c *gin.Context) {
 	}
 
 	RegisterUsecaseReq := model.RegisterUsecaseRequestDTO{
-		Username:     registerReq.Username,
+		Username:     strings.ToLower(registerReq.Username),
 		FirstName:    adUser.Profile.FirstName,
 		MiddleName:   adUser.Profile.MiddleName,
 		LastName:     registerReq.LastName,
