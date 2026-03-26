@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
@@ -17,19 +16,19 @@ func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
 		// Check Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: "Unathorized"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: "Unauthorized or token expired", Error: "Unathorized"})
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		clientIP, err := utils.GetIPAddress(c)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: "unauthorized"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: "Unauthorized or token expired", Error: "unauthorized"})
 			return
 		}
 
 		claims, err := infrastructure.ValidateToken(token, clientIP)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: "Invalid token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: "Unauthorized or token expired", Error: "Invalid token"})
 			return
 		}
 
@@ -49,7 +48,7 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 		logEntry.Info("inside auth role and permission")
 		roleValue, exists := c.Get("role")
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusForbidden, response.Status{Message: common.MessUnauthorized, Error: "Role not found"})
+			c.AbortWithStatusJSON(http.StatusForbidden, response.Status{Message: "Unauthorized or token expired", Error: "Role not found"})
 			return
 		}
 
@@ -57,26 +56,26 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 		clientIP, err := utils.GetIPAddress(c)
 		if err != nil {
 			logEntry.WithField("error", err.Error()).Warn("invalid ip address")
-			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "cannot determine client IP"})
+			c.JSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "cannot determine client IP"})
 			return
 		}
 
 		tokenClaimIP, err := utils.GetClaimIpAddress(c)
 		if err != nil {
 			logEntry.WithField("error", err.Error()).Warn("invalid token ip address", tokenClaimIP)
-			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "cannot determine token IP"})
+			c.JSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "cannot determine token IP"})
 			return
 		}
 
 		if tokenClaimIP != clientIP {
 			logEntry.Warn("trying from different ip")
-			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessUnauthorized, Error: "your network has been changed. please relogin"})
+			c.JSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "your network has been changed. please relogin"})
 			return
 		}
 
 		role, ok := roleValue.(string)
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{Message: common.MessUnauthorized, Error: "Invalid role format"})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{Message: "Unauthorized or token expired", Error: "Invalid role format"})
 			return
 		}
 
@@ -112,6 +111,6 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 		}
 
 		logEntry.Warn("message: Access Denied")
-		c.AbortWithStatusJSON(http.StatusForbidden, response.Status{Message: "Access denied", Error: "Access denied"})
+		c.AbortWithStatusJSON(http.StatusForbidden, response.Status{Message: "Access denied, invalid token", Error: "Access denied"})
 	}
 }
