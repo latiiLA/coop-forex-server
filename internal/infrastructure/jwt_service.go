@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/latiiLA/coop-forex-server/configs"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -34,7 +34,7 @@ func ValidateToken(tokenString string, clientIP string) (jwt.MapClaims, error) {
 			return nil, errors.New("unexpected signing method")
 		}
 		return []byte(configs.JwtSecret), nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 
 	if err != nil || !token.Valid {
 		return nil, errors.New("invalid token")
@@ -104,7 +104,7 @@ func ValidateRefreshToken(tokenString string, clientIP string) (jwt.MapClaims, e
 			return nil, fmt.Errorf("unexpected signing method")
 		}
 		return []byte(secret), nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 
 	if err != nil || !token.Valid {
 		return nil, fmt.Errorf("invalid token: %w", err)

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"time"
@@ -29,10 +30,12 @@ type ldapAuthUsecase struct {
 	BindUser     string
 	BindPassword string
 	UserFilter   string // Add this: "uid" for mock, "sAMAccountName" for real AD
+	UseTLS       bool
+	TLSInsecure  bool
 	timeout      time.Duration
 }
 
-func NewLDAPAuthUsecase(userRepo model.UserRepository, host string, port, baseDN, bindUser, bindPassword, userFilter string, timeout time.Duration) AuthUsecase {
+func NewLDAPAuthUsecase(userRepo model.UserRepository, host string, port, baseDN, bindUser, bindPassword, userFilter string, useTLS, tlsInsecure bool, timeout time.Duration) AuthUsecase {
 	return &ldapAuthUsecase{
 		userRepo:     userRepo,
 		Host:         host,
@@ -41,8 +44,37 @@ func NewLDAPAuthUsecase(userRepo model.UserRepository, host string, port, baseDN
 		BindUser:     bindUser,
 		BindPassword: bindPassword,
 		UserFilter:   userFilter,
+		UseTLS:       useTLS,
+		TLSInsecure:  tlsInsecure,
 		timeout:      timeout,
 	}
+}
+
+func (s *ldapAuthUsecase) dialLDAP() (*ldap.Conn, error) {
+	addr := fmt.Sprintf("%s:%s", s.Host, s.Port)
+	tlsConfig := &tls.Config{
+		ServerName:         s.Host,
+		InsecureSkipVerify: s.TLSInsecure,
+		MinVersion:         tls.VersionTLS12,
+	}
+
+	if s.UseTLS && s.Port == "636" {
+		return ldap.DialURL(fmt.Sprintf("ldaps://%s", addr), ldap.DialWithTLSConfig(tlsConfig))
+	}
+
+	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s", addr))
+	if err != nil {
+		return nil, err
+	}
+
+	if s.UseTLS {
+		if err := l.StartTLS(tlsConfig); err != nil {
+			l.Close()
+			return nil, fmt.Errorf("LDAP StartTLS failed: %w", err)
+		}
+	}
+
+	return l, nil
 }
 
 func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, ip string) (*model.LoginResponseDTO, error) {
@@ -65,9 +97,9 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 		return nil, common.ErrUserAccessRevoked
 	}
 
-	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s", s.Host))
+	l, err := s.dialLDAP()
 	if err != nil {
-		log.Println("LDAP: Connection failed")
+		log.Printf("LDAP: Connection failed: %v", err)
 		return nil, fmt.Errorf("failed to connect to LDAP: %w", err)
 	}
 	defer l.Close()
@@ -76,7 +108,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 	searchRequest := ldap.NewSearchRequest(
 		s.BasedDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(%s=%s)", s.UserFilter, username),
+		fmt.Sprintf("(%s=%s)", s.UserFilter, ldap.EscapeFilter(username)),
 		[]string{"dn"},
 		nil,
 	)
@@ -174,7 +206,7 @@ func (s *ldapAuthUsecase) Authenticate(ctx context.Context, username, password, 
 
 // Inside your LDAP service
 func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (*model.User, error) {
-	l, err := ldap.DialURL(fmt.Sprintf("ldap://%s:%s", s.Host, s.Port))
+	l, err := s.dialLDAP()
 	if err != nil {
 		return nil, err
 	}
@@ -190,9 +222,8 @@ func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (
 	searchRequest := ldap.NewSearchRequest(
 		s.BasedDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(%s=%s)", s.UserFilter, username), // Use sAMAccountName for real AD
+		fmt.Sprintf("(%s=%s)", s.UserFilter, ldap.EscapeFilter(username)), // Use sAMAccountName for real AD
 		[]string{"dn", "givenName", "name", "sn", "mail", "userAccountControl"},
-		// []string{"*"}, // used for debug to fetch all the data
 		nil,
 	)
 
@@ -202,17 +233,6 @@ func (s *ldapAuthUsecase) GetUserDetails(ctx context.Context, username string) (
 	}
 
 	entry := sr.Entries[0]
-
-	// log.Println("===== LDAP ATTRIBUTES DUMP =====")
-
-	// for _, attr := range entry.Attributes {
-	// 	log.Printf("Attribute: %s\n", attr.Name)
-	// 	for i, val := range attr.Values {
-	// 		log.Printf("   Value[%d]: %s\n", i, val)
-	// 	}
-	// }
-
-	// log.Println("================================")
 
 	profile := model.Profile{
 		DisplayName: entry.GetAttributeValue("name"),

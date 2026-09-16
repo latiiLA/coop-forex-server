@@ -62,6 +62,15 @@ func NewRequestUsecase(requestRepository model.RequestRepository, userRepository
 	}
 }
 
+func ensureRequestStatus(current model.RequestStatus, allowed ...model.RequestStatus) error {
+	for _, status := range allowed {
+		if current == status {
+			return nil
+		}
+	}
+	return common.ErrInvalidRequestTransition
+}
+
 func (ru *requestUsecase) AddRequest(ctx context.Context, authUserID primitive.ObjectID, request *model.Request) error {
 	ctx, cancel := context.WithTimeout(ctx, ru.contextTimeout)
 	defer cancel()
@@ -321,6 +330,10 @@ func (ru *requestUsecase) AuthorizeOrgRequest(ctx context.Context, authUserID pr
 		return common.ErrRequestNotFound
 	}
 
+	if err := ensureRequestStatus(existingRequest.RequestStatus, model.ReqStatusNew); err != nil {
+		return err
+	}
+
 	// 4. Create update object
 	forexRequest := model.RequestUpdate{}
 
@@ -379,6 +392,10 @@ func (ru *requestUsecase) ValidateRequest(ctx context.Context, authUserID primit
 		return common.ErrRequestNotFound
 	}
 
+	if err := ensureRequestStatus(forexRequest.RequestStatus, model.ReqStatusAuthorized, model.ReqStatusValidated); err != nil {
+		return err
+	}
+
 	if forexRequest.LockedBy != nil && *forexRequest.LockedBy != authUserID {
 		return common.ErrRequestIsLocked
 	}
@@ -401,6 +418,10 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
 		return common.ErrRequestNotFound
+	}
+
+	if err := ensureRequestStatus(existingRequest.RequestStatus, model.ReqStatusValidated, model.ReqStatusApproved); err != nil {
+		return err
 	}
 
 	// Copy the data
@@ -478,7 +499,7 @@ func (ru *requestUsecase) DeleteRequest(ctx context.Context, authUserID primitiv
 	forexRequest.DeletedAt = &now
 	forexRequest.DeletedBy = &authUserID
 	forexRequest.IsDeleted = true
-	forexRequest.RequestStatus = string(model.ReqStatusDrafted)
+	forexRequest.RequestStatus = string(model.ReqStatusDeleted)
 
 	return ru.requestRepository.Update(ctx, requestID, &forexRequest)
 }
@@ -490,6 +511,10 @@ func (ru *requestUsecase) SendRequest(ctx context.Context, authUserID primitive.
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
 		return common.ErrRequestNotFound
+	}
+
+	if err := ensureRequestStatus(existingRequest.RequestStatus, model.ReqStatusDrafted); err != nil {
+		return err
 	}
 
 	// Fetch sender
@@ -560,6 +585,10 @@ func (ru *requestUsecase) DeclineOrgRequest(ctx context.Context, authUserID prim
 		return common.ErrRequestNotFound
 	}
 
+	if err := ensureRequestStatus(existingRequest.RequestStatus, model.ReqStatusApproved); err != nil {
+		return err
+	}
+
 	// Copy the data
 	forexRequest := model.RequestUpdate{}
 	copier.Copy(&forexRequest, existingRequest)
@@ -590,6 +619,16 @@ func (ru *requestUsecase) RejectRequest(ctx context.Context, authUserID primitiv
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
 		return common.ErrRequestNotFound
+	}
+
+	if err := ensureRequestStatus(
+		existingRequest.RequestStatus,
+		model.ReqStatusNew,
+		model.ReqStatusAuthorized,
+		model.ReqStatusValidated,
+		model.ReqStatusApproved,
+	); err != nil {
+		return err
 	}
 
 	existingUser, err := ru.userRepository.FindByID(ctx, authUserID)
@@ -723,6 +762,10 @@ func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitiv
 	existingRequest, err := ru.requestRepository.FindByID(ctx, requestID, false)
 	if err != nil {
 		return common.ErrRequestNotFound
+	}
+
+	if err := ensureRequestStatus(existingRequest.RequestStatus, model.ReqStatusApproved); err != nil {
+		return err
 	}
 
 	for i := range existingRequest.ApprovedAmounts {

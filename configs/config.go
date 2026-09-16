@@ -65,6 +65,8 @@ var (
 	LDAPBaseDN       string
 	LDAPBindUser     string
 	LDAPBindPassword string
+	LDAPUseTLS       bool
+	LDAPTLSInsecure  bool
 
 	// ssl
 	CertFile string
@@ -309,6 +311,16 @@ func LoadConfig() {
 	LDAPBindPassword = os.Getenv("LDAP_BIND_PASSWORD")
 	if LDAPBindPassword == "" {
 		log.Fatalf("LDAP bind password is required but not set")
+	}
+
+	// Default to TLS on (StartTLS for 389, LDAPS for 636). Set LDAP_USE_TLS=false for local mock LDAP.
+	LDAPUseTLS = true
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("LDAP_USE_TLS"))); v == "false" || v == "0" {
+		LDAPUseTLS = false
+	}
+	LDAPTLSInsecure = false
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("LDAP_TLS_INSECURE"))); v == "true" || v == "1" {
+		LDAPTLSInsecure = true
 	}
 
 	// Read allowed origins from environment and split into slice

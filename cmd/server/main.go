@@ -58,7 +58,6 @@ func main() {
 	defer func() {
 		if err := client.Disconnect(ctx); err != nil {
 			logrus.Printf("Warning: failed to disconnect from DB: %v", err)
-
 		} else {
 			logrus.Printf("DB connection closed")
 		}
@@ -107,7 +106,9 @@ func main() {
 	// create an API group
 	api := r.Group("/api")
 
-	api.Static("/uploads", "./uploads") // allow upload access
+	uploads := api.Group("/uploads")
+	uploads.Use(middleware.JwtAuthMiddleware(configs.JwtSecret))
+	uploads.GET("/*filepath", middleware.ServeProtectedUpload)
 
 	router.RouterSetup(api, timeout, db)
 

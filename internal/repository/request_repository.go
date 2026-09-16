@@ -6,7 +6,6 @@ import (
 	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -214,8 +213,6 @@ func (rr *requestRepository) FindByRequestStatus(ctx context.Context, request_st
 	if err := cursor.All(ctx, &requests); err != nil {
 		return nil, err
 	}
-
-	logrus.Println("requests", len(requests), requests)
 
 	if len(requests) == 0 {
 		return []model.Request{}, nil

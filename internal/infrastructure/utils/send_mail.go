@@ -188,7 +188,10 @@ func SendAcknowledgementEmail(to, cc, bcc []string, subject string, body string,
 		"Content-ID": {"coop_logo"},
 	}))
 
-	logrus.Print(smtpHost, smtpPort, password)
+	logrus.WithFields(logrus.Fields{
+		"smtpHost": smtpHost,
+		"smtpPort": smtpPort,
+	}).Info("dialing SMTP server for acknowledgement email")
 
 	// Setup dialer
 	d := gomail.NewDialer(smtpHost, smtpPort, from, password)

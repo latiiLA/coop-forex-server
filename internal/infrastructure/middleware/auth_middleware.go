@@ -56,20 +56,20 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 		clientIP, err := utils.GetIPAddress(c)
 		if err != nil {
 			logEntry.WithField("error", err.Error()).Warn("invalid ip address")
-			c.JSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "cannot determine client IP"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "cannot determine client IP"})
 			return
 		}
 
 		tokenClaimIP, err := utils.GetClaimIpAddress(c)
 		if err != nil {
 			logEntry.WithField("error", err.Error()).Warn("invalid token ip address", tokenClaimIP)
-			c.JSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "cannot determine token IP"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "cannot determine token IP"})
 			return
 		}
 
 		if tokenClaimIP != clientIP {
 			logEntry.Warn("trying from different ip")
-			c.JSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "your network has been changed. please relogin"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, response.Status{Message: "Unauthorized or token expired", Error: "your network has been changed. please relogin"})
 			return
 		}
 

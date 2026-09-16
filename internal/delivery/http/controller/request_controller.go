@@ -351,6 +351,10 @@ func (rc *requestController) ValidateRequest(c *gin.Context) {
 			status = http.StatusConflict
 			message = common.MessRequestLocked
 
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
+
 		default:
 			status = http.StatusInternalServerError
 			message = common.MessInternalServerError
@@ -610,6 +614,10 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 			status = http.StatusConflict
 			message = common.MessRequestLocked
 
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
+
 		default:
 			status = http.StatusInternalServerError
 			message = common.MessInternalServerError
@@ -756,6 +764,10 @@ func (rc *requestController) ApproveRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
 			message = common.MessRequestLocked
+
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
 
 		default:
 			status = http.StatusInternalServerError
@@ -1140,6 +1152,10 @@ func (rc *requestController) AuthorizeOrgRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
+
 		default:
 			status = http.StatusInternalServerError
 			message = common.MessInternalServerError
@@ -1213,6 +1229,10 @@ func (rc *requestController) RejectRequest(c *gin.Context) {
 			status = http.StatusConflict
 			message = common.MessRequestLocked
 
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
+
 		default:
 			status = http.StatusInternalServerError
 			message = common.MessInternalServerError
@@ -1260,6 +1280,10 @@ func (rc *requestController) DeleteRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestCannotBeDeleted):
 			status = http.StatusForbidden
 			message = "You are not allowed to delete the request"
+
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
 
 		default:
 			status = http.StatusInternalServerError
@@ -1395,6 +1419,14 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
+
 		case errors.Is(err, common.ErrInvalidAcceptedCurrency):
 			status = http.StatusBadRequest
 			message = "Accepted currency must be the same as approved currency"
@@ -1447,6 +1479,10 @@ func (rc *requestController) SendRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
+
 		default:
 			status = http.StatusInternalServerError
 			message = common.MessInternalServerError
@@ -1490,6 +1526,10 @@ func (rc *requestController) DeclineOrgRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestNotFound):
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
 
 		default:
 			status = http.StatusInternalServerError
@@ -1579,6 +1619,10 @@ func (rc *requestController) LockRequest(c *gin.Context) {
 			status = http.StatusConflict
 			message = common.MessRequestLocked
 
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
+
 		default:
 			status = http.StatusInternalServerError
 			message = common.MessInternalServerError
@@ -1627,6 +1671,10 @@ func (rc *requestController) UnLockRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
 			message = common.MessRequestLocked
+
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Invalid request status for this action"
 
 		default:
 			status = http.StatusInternalServerError
