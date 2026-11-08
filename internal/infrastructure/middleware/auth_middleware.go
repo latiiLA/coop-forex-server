@@ -7,16 +7,25 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/latiiLA/coop-forex-server/internal/delivery/http/response"
+	"github.com/latiiLA/coop-forex-server/internal/domain/model"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure"
 	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 )
+
+// accessTokenBlacklist is set once at router bootstrap so logout can revoke access tokens
+// without changing every JwtAuthMiddleware call site.
+var accessTokenBlacklist model.TokenBlacklistRepository
+
+func SetAccessTokenBlacklist(repo model.TokenBlacklistRepository) {
+	accessTokenBlacklist = repo
+}
 
 func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check Authorization header
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: "Unauthorized or token expired", Error: "Unathorized"})
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: "Unauthorized or token expired", Error: "Unauthorized"})
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
@@ -32,12 +41,25 @@ func JwtAuthMiddleware(secretKey string) gin.HandlerFunc {
 			return
 		}
 
+		if accessTokenBlacklist != nil {
+			blacklisted, blErr := accessTokenBlacklist.IsBlacklisted(c.Request.Context(), token)
+			if blErr != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{Message: "Unauthorized or token expired", Error: "token check failed"})
+				return
+			}
+			if blacklisted {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, response.Status{Message: "Unauthorized or token expired", Error: "token revoked"})
+				return
+			}
+		}
+
 		c.Set("userID", claims["userID"])
 		c.Set("role", claims["role"])
 		c.Set("branchID", claims["branchID"])
 		c.Set("departmentID", claims["departmentID"])
 		c.Set("ip", claims["ip"])
 		c.Set("permissions", claims["permissions"])
+		c.Set("accessToken", token)
 		c.Next()
 	}
 }
@@ -90,17 +112,10 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 			return
 		}
 
-		permissions, ok := perms.([]interface{})
-		if !ok {
+		userPerms := normalizePermissionClaim(perms)
+		if userPerms == nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, response.Status{Message: "Invalid permission", Error: "Invalid permissions format"})
 			return
-		}
-
-		userPerms := make([]string, 0, len(permissions))
-		for _, p := range permissions {
-			if str, ok := p.(string); ok {
-				userPerms = append(userPerms, str)
-			}
 		}
 
 		for _, required := range requiredPermission {
@@ -112,5 +127,23 @@ func AuthorizeRolesOrPermissions(allowedRoles []string, requiredPermission []str
 
 		logEntry.Warn("message: Access Denied")
 		c.AbortWithStatusJSON(http.StatusForbidden, response.Status{Message: "Access denied, invalid token", Error: "Access denied"})
+	}
+}
+
+// normalizePermissionClaim accepts JWT permission claims as []string or []interface{}.
+func normalizePermissionClaim(perms any) []string {
+	switch v := perms.(type) {
+	case []string:
+		return v
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, p := range v {
+			if str, ok := p.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
 	}
 }

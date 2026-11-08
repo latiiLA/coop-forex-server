@@ -14,8 +14,8 @@ func GenerateToken(userID primitive.ObjectID, role string, branchID primitive.Ob
 	claims := jwt.MapClaims{
 		"userID":       userID.Hex(),
 		"role":         role,
-		"branchID":     branchID,
-		"departmentID": departmentID,
+		"branchID":     branchID.Hex(),
+		"departmentID": departmentID.Hex(),
 		"permissions":  permissions,
 		"ip":           ip,
 		"exp":          time.Now().Add(configs.AccessTokenExpiry).Unix(), // expiration
@@ -53,11 +53,8 @@ func ValidateToken(tokenString string, clientIP string) (jwt.MapClaims, error) {
 
 	// --- IP validation ---
 	tokenIP, ok := claims["ip"].(string)
-	if ok {
-		// Allow localhost variations
-		if clientIP != tokenIP && clientIP != "::1" && clientIP != "127.0.0.1" {
-			return nil, errors.New("IP does not match the token")
-		}
+	if ok && tokenIP != "" && clientIP != tokenIP {
+		return nil, errors.New("IP does not match the token")
 	}
 
 	return claims, nil
@@ -70,8 +67,7 @@ func GenerateRefreshToken(userID primitive.ObjectID, ip string) (string, error) 
 		return "", fmt.Errorf("REFRESH_JWT_SECRET environment variable is not set")
 	}
 
-	// Set expiration time (e.g., 7 days)
-	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+	expirationTime := time.Now().Add(configs.RefreshTokenExpiry)
 
 	// Use MapClaims to match your access token style
 	claims := jwt.MapClaims{
@@ -123,11 +119,8 @@ func ValidateRefreshToken(tokenString string, clientIP string) (jwt.MapClaims, e
 
 	// --- Optional IP validation ---
 	tokenIP, ok := claims["ip"].(string)
-	if ok {
-		// Allow localhost variations
-		if clientIP != tokenIP && clientIP != "::1" && clientIP != "127.0.0.1" {
-			return nil, fmt.Errorf("IP does not match token")
-		}
+	if ok && tokenIP != "" && clientIP != tokenIP {
+		return nil, fmt.Errorf("IP does not match token")
 	}
 
 	// Check expiration

@@ -15,7 +15,11 @@ import (
 func NewRequestRouter(db *mongo.Database, timeout time.Duration, group *gin.RouterGroup) {
 	requestRepo := repository.NewRequestRepository(db)
 	userRepo := repository.NewUserRepository(db)
-	requestUsecase := usecase.NewRequestUsecase(requestRepo, userRepo, timeout)
+	receiptRepo := repository.NewReceiptRepository(db)
+	currencyRepo := repository.NewCurrencyRepository(db)
+	activityLogRepo := repository.NewActivityLogRepository(db)
+	activityLogUsecase := usecase.NewActivityLogUsecase(activityLogRepo, timeout)
+	requestUsecase := usecase.NewRequestUsecase(requestRepo, userRepo, receiptRepo, currencyRepo, activityLogUsecase, timeout)
 	fileRepo := repository.NewFileRepository(db)
 	fileUsecase := usecase.NewFileUsecase(fileRepo, timeout)
 	requestController := controller.NewRequestController(requestUsecase, fileUsecase)
@@ -34,21 +38,27 @@ func NewRequestRouter(db *mongo.Database, timeout time.Duration, group *gin.Rout
 	group.POST("/orgsendrequest/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{""}, []string{"request:send"}), requestController.SendRequest)
 	group.POST("/orgdeclinerequest/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{""}, []string{"request:decline"}), requestController.DeclineOrgRequest)
 
-	group.GET("/authorizedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{""}, []string{"request:view-authorized"}), requestController.GetAuthorizedRequests)
-	group.GET("/newrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{""}, []string{"request:view-new"}), requestController.GetNewOrgRequests)
-	group.GET("/rejectedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-rejected"}), requestController.GetRejectedRequests)
-	group.GET("/validatedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-validated"}), requestController.GetValidatedRequests)
-	group.GET("/approvedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-approved"}), requestController.GetApprovedRequests)
-	group.GET("/acceptedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-accepted"}), requestController.GetAcceptedRequests)
-	group.GET("/declinedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-declined"}), requestController.GetDeclinedRequests)
-	group.POST("/lockrequest/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:lock"}), requestController.LockRequest)
-	group.POST("/unlockrequest/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:unlock"}), requestController.UnLockRequest)
+	// Assign/unassign: New (branch authorizer), Authorized (validator), Validated (forex authorizer).
+	group.POST("/assignrequest/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:send", "request:authorize", "request:validate", "request:approve"}), requestController.LockRequest)
+	group.POST("/unassignrequest/:id", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:send", "request:authorize", "request:validate", "request:approve"}), requestController.UnLockRequest)
 
-	group.GET("/orgdraftedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-orgdrafted"}), requestController.GetDraftedOrgRequests)
-	group.GET("/orgauthorizedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-orgauthorized"}), requestController.GetAuthorizedOrgRequests)
-	group.GET("/orgapprovedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-orgapproved"}), requestController.GetApprovedOrgRequests)
-	group.GET("/orgacceptedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-orgaccepted"}), requestController.GetAcceptedOrgRequests)
-	group.GET("/orgdeclinedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-orgdeclined"}), requestController.GetDeclinedOrgRequests)
-	group.GET("/orgrejectedrequests", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view-orgrejected"}), requestController.GetRejectedOrgRequests)
+	group.GET("/requests/queue", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{
+		"request:view-authorized",
+		"request:view-orgauthorized",
+		"request:view-validated",
+		"request:view-approved",
+		"request:view-orgapproved",
+		"request:view-accepted",
+		"request:view-orgaccepted",
+		"request:view-declined",
+		"request:view-orgdeclined",
+		"request:view-rejected",
+		"request:view-orgrejected",
+		"request:view-new",
+		"request:view-orgdrafted",
+	}), requestController.GetRequestQueue)
+	group.GET("/requests/summary", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:view", "request:status"}), requestController.GetRequestStatusSummary)
 
+	group.GET("/request/:id/report", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:generate-report"}), requestController.GenerateRequestReport)
+	group.GET("/receipts/validate/:receiptNumber", middleware.JwtAuthMiddleware(configs.JwtSecret), middleware.AuthorizeRolesOrPermissions([]string{}, []string{"request:generate-report", "request:view", "request:view-accepted"}), requestController.ValidateReceipt)
 }

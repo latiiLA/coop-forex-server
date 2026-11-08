@@ -68,11 +68,15 @@ var (
 	LDAPUseTLS       bool
 	LDAPTLSInsecure  bool
 
+	// MailTLSInsecure skips SMTP certificate verification when true (dev only).
+	MailTLSInsecure bool
+
 	// ssl
 	CertFile string
 	KeyFile  string
 
 	AllowedOrigins []string
+	TrustedProxies []string
 )
 
 func LoadConfig() {
@@ -102,7 +106,7 @@ func LoadConfig() {
 	}
 
 	RefreshJwtSecret = os.Getenv("REFRESH_JWT_SECRET")
-	if JwtSecret == "" {
+	if RefreshJwtSecret == "" {
 		log.Fatal("REFRESH_JWT_SECRET is required but not set")
 	}
 
@@ -323,10 +327,40 @@ func LoadConfig() {
 		LDAPTLSInsecure = true
 	}
 
+	MailTLSInsecure = false
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("MAIL_TLS_INSECURE"))); v == "true" || v == "1" {
+		MailTLSInsecure = true
+	}
+
 	// Read allowed origins from environment and split into slice
 	originsEnv := os.Getenv("ALLOWED_ORIGINS")
-	if originsEnv != "" {
-		AllowedOrigins = strings.Split(originsEnv, ",")
+	if originsEnv == "" {
+		log.Fatal("ALLOWED_ORIGINS is required but not set (comma-separated explicit origins; '*' is not allowed with credentials)")
+	}
+	for _, o := range strings.Split(originsEnv, ",") {
+		origin := strings.TrimSpace(o)
+		if origin == "" {
+			continue
+		}
+		if origin == "*" {
+			log.Fatal("ALLOWED_ORIGINS must not include '*' when credentials are enabled")
+		}
+		AllowedOrigins = append(AllowedOrigins, origin)
+	}
+	if len(AllowedOrigins) == 0 {
+		log.Fatal("ALLOWED_ORIGINS is required but not set")
+	}
+
+	proxiesEnv := os.Getenv("TRUSTED_PROXIES")
+	if proxiesEnv == "" {
+		TrustedProxies = []string{"127.0.0.1", "::1"}
+	} else {
+		for _, p := range strings.Split(proxiesEnv, ",") {
+			proxy := strings.TrimSpace(p)
+			if proxy != "" {
+				TrustedProxies = append(TrustedProxies, proxy)
+			}
+		}
 	}
 }
 

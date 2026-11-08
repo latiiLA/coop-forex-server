@@ -21,4 +21,5 @@ type File struct {
 type FileRepository interface {
 	Create(ctx context.Context, file *File) (*primitive.ObjectID, error)
 	FindByID(ctx context.Context, file_id primitive.ObjectID) (*File, error)
+	FindByName(ctx context.Context, name string) (*File, error)
 }

@@ -125,9 +125,16 @@ type Request struct {
 	DeletedAt    *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	IsDeleted    bool                `json:"is_deleted" bson:"is_deleted"`
 
-	LockedBy      *primitive.ObjectID `json:"locked_by,omitempty" bson:"locked_by,omitempty"`
-	LockedAt      *time.Time          `json:"locked_at,omitempty" bson:"locked_at,omitempty"`
-	LockExpiresAt *time.Time          `json:"lock_expires_at,omitempty" bson:"lock_expires_at,omitempty"`
+	// AssignedTo is the validator/authorizer assignee (Mongo field locked_by for legacy).
+	// Used for Authorized/Validated claim + queue visibility — not for Accept/Decline.
+	AssignedTo    *primitive.ObjectID `json:"assigned_to,omitempty" bson:"locked_by,omitempty"`
+	AssignedAt    *time.Time          `json:"assigned_at,omitempty" bson:"locked_at,omitempty"`
+	Assignee      *User               `json:"assignee,omitempty" bson:"assignee,omitempty"`
+	LockExpiresAt *time.Time          `json:"lock_expires_at,omitempty" bson:"lock_expires_at,omitempty"` // legacy; cleared on assign/unassign
+
+	// ProcessingBranchID is the result-processor branch that accepted the request.
+	ProcessingBranchID *primitive.ObjectID `json:"processing_branch_id,omitempty" bson:"processing_branch_id,omitempty"`
+	ProcessingBranch   *Branch             `json:"processing_branch,omitempty" bson:"processing_branch,omitempty"`
 }
 
 type RequestUpdate struct {
@@ -208,27 +215,30 @@ type RequestUpdate struct {
 	DeletedAt    *time.Time          `json:"deleted_at,omitempty" bson:"deleted_at,omitempty"`
 	IsDeleted    bool                `json:"is_deleted" bson:"is_deleted"`
 
-	LockedBy      *primitive.ObjectID `json:"locked_by,omitempty" bson:"locked_by,omitempty"`
-	LockedAt      *time.Time          `json:"locked_at,omitempty" bson:"locked_at,omitempty"`
+	AssignedTo    *primitive.ObjectID `json:"assigned_to,omitempty" bson:"locked_by,omitempty"`
+	AssignedAt    *time.Time          `json:"assigned_at,omitempty" bson:"locked_at,omitempty"`
 	LockExpiresAt *time.Time          `json:"lock_expires_at,omitempty" bson:"lock_expires_at,omitempty"`
+
+	ProcessingBranchID *primitive.ObjectID `json:"processing_branch_id,omitempty" bson:"processing_branch_id,omitempty"`
 }
 
 type RequestDTO struct {
 	ApplicantName          string   `form:"applicant_name" binding:"required,excludesall=<>"`
-	ApplicantAccountNumber string   `form:"applicant_account_number" binding:"required,alphanum"`
-	AverageDeposit         string   `form:"average_deposit" binding:"required,alphanum"`
-	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required,alphanum"`
-	CurrentFcyPerformance  string   `form:"current_fcy_performance" binding:"required,alphanum"`
-	TravelPurposeID        string   `form:"travel_purpose_id" binding:"required,alphanum,len=24"`
-	TravelCountryID        string   `form:"travel_country_id" binding:"required,alphanum,len=24"`
-	RequestingAs           string   `form:"requesting_as" binding:"required,alphanum"`
-	AccountCurrencyID      string   `form:"account_currency_id" binding:"required,alphanum,len=24"`
-	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,alphanum,len=24"`
-	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,alphanum"`
-	AccountsToDeduct       []string `form:"accounts_to_deduct" binding:"required,min=1,dive,required,alphanum"`
-	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required"`
-	CardAssociatedAccount  string   `form:"card_associated_account" binding:"omitempty,alphanum"`
-	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,min=3,max=50,excludesall=<>"`
+	ApplicantAccountNumber string   `form:"applicant_account_number" binding:"required,alphanum,len=16"`
+	AverageDeposit         string   `form:"average_deposit" binding:"required,numeric"`
+	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required,numeric"`
+	CurrentFcyPerformance  string   `form:"current_fcy_performance" binding:"required,numeric"`
+	TravelPurposeID        string   `form:"travel_purpose_id" binding:"required,len=24,hexadecimal"`
+	TravelCountryID        string   `form:"travel_country_id" binding:"required,len=24,hexadecimal"`
+	RequestingAs           string   `form:"requesting_as" binding:"required,oneof=Individual Institution"`
+	AccountCurrencyID      string   `form:"account_currency_id" binding:"required,len=24,hexadecimal"`
+	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,len=24,hexadecimal"`
+	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,numeric"`
+	AccountsToDeduct       []string `form:"accounts_to_deduct" binding:"required,min=1,dive,required,alphanum,len=16"`
+	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required,oneof=Cash Card Cash-and-Card"`
+	CardAssociatedAccount  string   `form:"card_associated_account" binding:"omitempty,alphanum,len=16"`
+	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,min=3,max=200,excludesall=<>"`
+	AuthorizerID           string   `form:"authorizer_id" binding:"required,len=24,hexadecimal"`
 
 	// Attachments (must use `*multipart.FileHeader`)
 	PassportAttachment           *multipart.FileHeader `form:"passport_attachment"`
@@ -242,20 +252,21 @@ type RequestDTO struct {
 
 type UpdateRequestDTO struct {
 	ApplicantName          string   `form:"applicant_name" binding:"required,excludesall=<>"`
-	ApplicantAccountNumber string   `form:"applicant_account_number" binding:"required,alphanum"`
-	AverageDeposit         string   `form:"average_deposit" binding:"required,alphanum,gte=0"`
-	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required,alphanum,gte=0"`
-	CurrentFcyPerformance  string   `form:"current_fcy_performance" binding:"required,alphanum,gte=0"`
-	TravelPurposeID        string   `form:"travel_purpose_id" binding:"required,alphanum,len=24"`
-	TravelCountryID        string   `form:"travel_country_id" binding:"required,alphanum,len=24"`
-	RequestingAs           string   `form:"requesting_as" binding:"required,alphanum"`
-	AccountCurrencyID      string   `form:"account_currency_id" binding:"required,alphanum,len=24"`
-	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,alphanum,len=24"`
-	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,alphanum,gt=0"`
-	AccountsToDeduct       []string `form:"accounts_to_deduct" binding:"required,min=1,dive,required,alphanum"`
-	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required"`
-	CardAssociatedAccount  string   `form:"card_associated_account" binding:"omitempty,alphanum"`
-	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,excludesall=<>,gt=0"`
+	ApplicantAccountNumber string   `form:"applicant_account_number" binding:"required,alphanum,len=16"`
+	AverageDeposit         string   `form:"average_deposit" binding:"required,numeric"`
+	TotalFcyGenerated      string   `form:"total_fcy_generated" binding:"required,numeric"`
+	CurrentFcyPerformance  string   `form:"current_fcy_performance" binding:"required,numeric"`
+	TravelPurposeID        string   `form:"travel_purpose_id" binding:"required,len=24,hexadecimal"`
+	TravelCountryID        string   `form:"travel_country_id" binding:"required,len=24,hexadecimal"`
+	RequestingAs           string   `form:"requesting_as" binding:"required,oneof=Individual Institution"`
+	AccountCurrencyID      string   `form:"account_currency_id" binding:"required,len=24,hexadecimal"`
+	FcyRequestedID         string   `form:"fcy_requested_id" binding:"required,len=24,hexadecimal"`
+	FcyRequestedAmount     string   `form:"fcy_requested_amount" binding:"required,numeric"`
+	AccountsToDeduct       []string `form:"accounts_to_deduct" binding:"required,min=1,dive,required,alphanum,len=16"`
+	FcyAcceptanceMode      string   `form:"fcy_acceptance_mode" binding:"required,oneof=Cash Card Cash-and-Card"`
+	CardAssociatedAccount  string   `form:"card_associated_account" binding:"omitempty,alphanum,len=16"`
+	BranchRecommendation   string   `form:"branch_recommendation" binding:"required,min=3,max=200,excludesall=<>"`
+	AuthorizerID           string   `form:"authorizer_id" binding:"required,len=24,hexadecimal"`
 
 	// Attachments (must use `*multipart.FileHeader`)
 	PassportAttachment           *multipart.FileHeader `form:"passport_attachment"`
@@ -296,10 +307,38 @@ type ParsedApproval struct {
 type RequestRepository interface {
 	Create(ctx context.Context, request *Request) error
 	FindByID(ctx context.Context, request_id primitive.ObjectID, populate bool) (*Request, error)
-	FindAll(ctx context.Context, populate bool) ([]Request, error)
+	FindAll(ctx context.Context, populate bool, pageQuery PageQuery) (*PaginatedRequests, error)
 	Validate(ctx context.Context, request_id primitive.ObjectID, request *Request) error
-	FindAllByOrgID(ctx context.Context, orgKey string, orgID primitive.ObjectID, populate bool) ([]Request, error)
-	FindOrgByRequestStatus(ctx context.Context, orgID primitive.ObjectID, orgKey, request_status string, populate bool) ([]Request, error)
+	FindAllByOrgID(ctx context.Context, orgKey string, orgID primitive.ObjectID, populate bool, pageQuery PageQuery) (*PaginatedRequests, error)
+	// FindOrgByRequestStatus lists org-scoped rows. When assigneeViewer is set, only
+	// unassigned/expired and assigned-to-viewer rows are returned.
+	FindOrgByRequestStatus(ctx context.Context, orgID primitive.ObjectID, orgKey, request_status string, populate bool, pageQuery PageQuery, assigneeViewer *primitive.ObjectID) (*PaginatedRequests, error)
 	Update(ctx context.Context, requestID primitive.ObjectID, request *RequestUpdate) error
-	FindByRequestStatus(ctx context.Context, request_status string, populate bool) ([]Request, error)
+	// UpdateIfStatus updates only when current request_status is in expectedStatuses (atomic transition).
+	UpdateIfStatus(ctx context.Context, requestID primitive.ObjectID, expectedStatuses []string, request *RequestUpdate) error
+	// ValidateIfStatus validates only when status matches expectedStatuses.
+	ValidateIfStatus(ctx context.Context, requestID primitive.ObjectID, expectedStatuses []string, request *Request) error
+	// FindByRequestStatus lists by status. When assigneeViewer is set, only unassigned
+	// (or expired) and assigned-to-viewer rows are returned (authorizer/validator queues).
+	FindByRequestStatus(ctx context.Context, request_status string, populate bool, pageQuery PageQuery, assigneeViewer *primitive.ObjectID) (*PaginatedRequests, error)
+	FindByCreatorAndStatus(ctx context.Context, creatorID primitive.ObjectID, request_status string, populate bool, pageQuery PageQuery) (*PaginatedRequests, error)
+	CountByStatus(ctx context.Context, orgKey string, orgID primitive.ObjectID) (*RequestStatusSummary, error)
+	Assign(ctx context.Context, requestID, userID primitive.ObjectID, assignedAt time.Time) error
+	// AssignIfAvailable atomically claims an unassigned (or self-owned / expired) request. Returns false on collision.
+	AssignIfAvailable(ctx context.Context, requestID, userID primitive.ObjectID, assignedAt time.Time) (bool, error)
+	ClearAssignment(ctx context.Context, requestID primitive.ObjectID) error
+	// FindByAttachmentFileID finds a request that references the given uploaded file id.
+	FindByAttachmentFileID(ctx context.Context, fileID primitive.ObjectID) (*Request, error)
+}
+
+// AssignRequestDTO allows approvers to assign to another eligible approver.
+type AssignRequestDTO struct {
+	AssigneeID *string `json:"assignee_id,omitempty"`
+}
+
+// AssignRequestResult is returned after a successful assignment.
+type AssignRequestResult struct {
+	AssignedTo *primitive.ObjectID `json:"assigned_to"`
+	AssignedAt time.Time           `json:"assigned_at"`
+	Assignee   *User               `json:"assignee,omitempty"`
 }

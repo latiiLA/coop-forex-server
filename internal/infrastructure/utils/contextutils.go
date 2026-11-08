@@ -3,8 +3,6 @@ package utils
 import (
 	"errors"
 
-	"strings"
-
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -76,15 +74,44 @@ func GetClaimIpAddress(c *gin.Context) (any, error) {
 }
 
 func GetIPAddress(c *gin.Context) (string, error) {
-	ip := c.Request.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
-		ips := strings.Split(ip, ",")
-		return strings.TrimSpace(ips[0]), nil
-	}
-	ip = c.ClientIP() // fallback
+	// Use Gin ClientIP so X-Forwarded-For is only trusted for configured proxies.
+	ip := c.ClientIP()
 	if ip == "" {
 		return "", errors.New("IP not found")
 	}
 	return ip, nil
+}
+
+func GetPermissions(c *gin.Context) []string {
+	perms, exists := c.Get("permissions")
+	if !exists {
+		return nil
+	}
+
+	switch v := perms.(type) {
+	case []string:
+		return v
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, p := range v {
+			if str, ok := p.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func GetAccessToken(c *gin.Context) string {
+	val, exists := c.Get("accessToken")
+	if !exists {
+		return ""
+	}
+	token, ok := val.(string)
+	if !ok {
+		return ""
+	}
+	return token
 }

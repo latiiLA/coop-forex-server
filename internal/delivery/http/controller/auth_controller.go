@@ -24,12 +24,14 @@ type AuthController interface {
 type authController struct {
 	authUsecase usecase.AuthUsecase
 	userUsecase usecase.UserUsecase
+	activityLog model.ActivityLogUsecase
 }
 
-func NewAuthController(u usecase.AuthUsecase, ldap usecase.UserUsecase) AuthController {
+func NewAuthController(u usecase.AuthUsecase, ldap usecase.UserUsecase, activityLog model.ActivityLogUsecase) AuthController {
 	return &authController{
 		authUsecase: u,
 		userUsecase: ldap,
+		activityLog: activityLog,
 	}
 }
 
@@ -120,6 +122,18 @@ func (a *authController) Login(c *gin.Context) {
 		"username": strings.ToLower(req.Username),
 		"ip":       clientIP,
 	}).Info("Login successful")
+
+	actorID := user.ID
+	usecase.LogActivity(a.activityLog, c, model.ActivityLogInput{
+		ActorID:     actorID,
+		Action:      model.ActionLogin,
+		EntityType:  model.EntityAuth,
+		EntityID:    &actorID,
+		Description: "User logged in via LDAP",
+		Metadata: map[string]any{
+			"ip": clientIP,
+		},
+	})
 
 	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Logged In Successfully", Data: user})
 }

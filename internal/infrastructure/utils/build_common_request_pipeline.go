@@ -24,7 +24,7 @@ func ProjectIfNotNull(field string) bson.E {
 func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 	var pipeline mongo.Pipeline
 
-	// Always include approved currencies lookup
+	// Lookup currencies, then re-order to match approved/accepted ID arrays.
 	pipeline = append(pipeline, bson.D{
 		{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "currencies"},
@@ -40,9 +40,30 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 					}},
 				},
 			}},
-			{Key: "as", Value: "approved_currencies"},
+			{Key: "as", Value: "approved_currencies_raw"},
 		}},
 	})
+	pipeline = append(pipeline, bson.D{
+		{Key: "$addFields", Value: bson.D{
+			{Key: "approved_currencies", Value: bson.D{
+				{Key: "$map", Value: bson.D{
+					{Key: "input", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$approved_currency_ids", bson.A{}}}}},
+					{Key: "as", Value: "cid"},
+					{Key: "in", Value: bson.D{
+						{Key: "$arrayElemAt", Value: bson.A{
+							bson.D{{Key: "$filter", Value: bson.D{
+								{Key: "input", Value: "$approved_currencies_raw"},
+								{Key: "as", Value: "c"},
+								{Key: "cond", Value: bson.D{{Key: "$eq", Value: bson.A{"$$c._id", "$$cid"}}}},
+							}}},
+							0,
+						}},
+					}},
+				}},
+			}},
+		}},
+	})
+	pipeline = append(pipeline, bson.D{{Key: "$unset", Value: "approved_currencies_raw"}})
 
 	pipeline = append(pipeline, bson.D{
 		{Key: "$lookup", Value: bson.D{
@@ -59,9 +80,30 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 					}},
 				},
 			}},
-			{Key: "as", Value: "accepted_currencies"},
+			{Key: "as", Value: "accepted_currencies_raw"},
 		}},
 	})
+	pipeline = append(pipeline, bson.D{
+		{Key: "$addFields", Value: bson.D{
+			{Key: "accepted_currencies", Value: bson.D{
+				{Key: "$map", Value: bson.D{
+					{Key: "input", Value: bson.D{{Key: "$ifNull", Value: bson.A{"$accepted_currency_ids", bson.A{}}}}},
+					{Key: "as", Value: "cid"},
+					{Key: "in", Value: bson.D{
+						{Key: "$arrayElemAt", Value: bson.A{
+							bson.D{{Key: "$filter", Value: bson.D{
+								{Key: "input", Value: "$accepted_currencies_raw"},
+								{Key: "as", Value: "c"},
+								{Key: "cond", Value: bson.D{{Key: "$eq", Value: bson.A{"$$c._id", "$$cid"}}}},
+							}}},
+							0,
+						}},
+					}},
+				}},
+			}},
+		}},
+	})
+	pipeline = append(pipeline, bson.D{{Key: "$unset", Value: "accepted_currencies_raw"}})
 
 	// Populate users/profiles if requested
 	if populate {
@@ -73,10 +115,12 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		pipeline = append(pipeline, LookupUserWithProfile("approved_by", "approver")...)
 		pipeline = append(pipeline, LookupUserWithProfile("accepted_by", "accepter")...)
 		pipeline = append(pipeline, LookupUserWithProfile("declined_by", "decliner")...)
+		pipeline = append(pipeline, LookupUserWithProfile("locked_by", "assignee")...)
 
 		// Populate other referenced collections
 		pipeline = append(pipeline, LookupAndUnwind("departments", "department_id", "department")...)
 		pipeline = append(pipeline, LookupAndUnwind("branches", "branch_id", "branch")...)
+		pipeline = append(pipeline, LookupAndUnwind("branches", "processing_branch_id", "processing_branch")...)
 		pipeline = append(pipeline, LookupAndUnwind("countries", "travel_country_id", "travel_country")...)
 		pipeline = append(pipeline, LookupAndUnwind("travel_purposes", "travel_purpose_id", "travel_purpose")...)
 		pipeline = append(pipeline, LookupAndUnwind("currencies", "account_currency_id", "account_currency")...)
@@ -110,11 +154,13 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		{Key: "fcy_acceptance_mode", Value: 1},
 		{Key: "request_status", Value: 1},
 		{Key: "branch_id", Value: 1},
+		{Key: "processing_branch_id", Value: 1},
 		{Key: "department_id", Value: 1},
 		{Key: "travel_country_id", Value: 1},
 		{Key: "travel_purpose_id", Value: 1},
 		{Key: "fcy_requested_id", Value: 1},
 		{Key: "approved_currency_ids", Value: 1},
+		{Key: "accepted_currency_ids", Value: 1},
 		{Key: "branch_recommendation", Value: 1},
 		{Key: "rejection_reason", Value: 1},
 
@@ -138,6 +184,8 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 		{Key: "rejected_by", Value: 1},
 		{Key: "accepted_by", Value: 1},
 		{Key: "declined_by", Value: 1},
+		{Key: "locked_by", Value: 1},
+		{Key: "locked_at", Value: 1},
 
 		{Key: "created_at", Value: 1},
 		{Key: "updated_at", Value: 1},
@@ -161,6 +209,7 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 			"approver",
 			"accepter",
 			"decliner",
+			"assignee",
 		}
 
 		for _, u := range users {
@@ -177,6 +226,7 @@ func BuildCommonRequestPipelineStages(populate bool) mongo.Pipeline {
 
 		// Branch, department, travel_country, travel_purpose
 		project = append(project, bson.E{Key: "branch", Value: 1})
+		project = append(project, bson.E{Key: "processing_branch", Value: 1})
 		project = append(project, bson.E{Key: "department", Value: 1})
 		project = append(project, bson.E{Key: "travel_country", Value: 1})
 		project = append(project, bson.E{Key: "travel_purpose", Value: 1})

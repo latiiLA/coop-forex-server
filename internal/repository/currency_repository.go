@@ -25,7 +25,15 @@ func (cr *currencyRepository) Create(ctx context.Context, currency *model.Curren
 }
 
 func (cr *currencyRepository) FindByID(ctx context.Context, currency_id primitive.ObjectID) (*model.Currency, error) {
-	return nil, errors.New("not implemented yet")
+	var currency model.Currency
+	err := cr.collection.FindOne(ctx, bson.M{
+		"_id":        currency_id,
+		"is_deleted": false,
+	}).Decode(&currency)
+	if err != nil {
+		return nil, err
+	}
+	return &currency, nil
 }
 
 func (cr *currencyRepository) FindAll(ctx context.Context) ([]model.Currency, error) {

@@ -1,0 +1,12 @@
+[
+  {
+    "update": "roles",
+    "updates": [
+      {
+        "q": { "name": { "$in": ["FOREXUSER", "FOREXAPPROVER"] } },
+        "u": { "$addToSet": { "permissions": "request:view-assignee" } },
+        "multi": true
+      }
+    ]
+  }
+]

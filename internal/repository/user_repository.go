@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
+	"github.com/latiiLA/coop-forex-server/internal/infrastructure/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -709,6 +711,158 @@ func (ur *userRepository) Update(ctx context.Context, user_id primitive.ObjectID
 	}
 
 	return &updatedUser, nil
+}
+
+func (ur *userRepository) UpdateStatus(ctx context.Context, userID primitive.ObjectID, status model.UserStatus, updatedBy primitive.ObjectID) (*model.User, error) {
+	filter := bson.M{"_id": userID, "is_deleted": false}
+	result, err := ur.collection.UpdateOne(ctx, filter, bson.M{
+		"$set": bson.M{
+			"status":     status,
+			"updated_by": updatedBy,
+			"updated_at": time.Now(),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result.MatchedCount == 0 {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return ur.FindByID(ctx, userID)
+}
+
+func (ur *userRepository) CountByStatus(ctx context.Context) (*model.UserStatusSummary, error) {
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.D{{Key: "is_deleted", Value: false}}}},
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$status"},
+			{Key: "count", Value: bson.D{{Key: "$sum", Value: 1}}},
+		}}},
+	}
+	cursor, err := ur.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	summary := &model.UserStatusSummary{ByStatus: map[string]int64{}}
+	type row struct {
+		ID    string `bson:"_id"`
+		Count int64  `bson:"count"`
+	}
+	var rows []row
+	if err := cursor.All(ctx, &rows); err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		summary.ByStatus[r.ID] = r.Count
+		summary.Total += r.Count
+	}
+	return summary, nil
+}
+
+func (ur *userRepository) FindEligibleApprovers(ctx context.Context) (*[]model.UserResponseDTO, error) {
+	all, err := ur.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	eligible := make([]model.UserResponseDTO, 0)
+	if all == nil {
+		return &eligible, nil
+	}
+	for _, u := range *all {
+		if u.Status != string(model.StatusActive) && u.Status != string(model.StatusNew) {
+			continue
+		}
+		perms := utils.MergePermissions(u.Role.Permissions, u.Permissions)
+		for _, p := range perms {
+			if p == "request:approve" {
+				eligible = append(eligible, u)
+				break
+			}
+		}
+	}
+	return &eligible, nil
+}
+
+func (ur *userRepository) FindEligibleBranchAuthorizers(ctx context.Context, branchID primitive.ObjectID) (*[]model.UserResponseDTO, error) {
+	eligible := make([]model.UserResponseDTO, 0)
+	if branchID.IsZero() {
+		return &eligible, nil
+	}
+
+	// Query by profile.branch_id so JWT/claim drift cannot hide same-branch authorizers.
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "is_deleted", Value: false},
+			{Key: "status", Value: bson.D{{Key: "$in", Value: bson.A{
+				string(model.StatusActive),
+				string(model.StatusNew),
+			}}}},
+		}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "profiles"},
+			{Key: "localField", Value: "profile_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "profile"},
+		}}},
+		bson.D{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$profile"},
+			{Key: "preserveNullAndEmptyArrays", Value: false},
+		}}},
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "profile.branch_id", Value: branchID},
+		}}},
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "roles"},
+			{Key: "localField", Value: "role_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "role"},
+		}}},
+		bson.D{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$role"},
+			{Key: "preserveNullAndEmptyArrays", Value: false},
+		}}},
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "$or", Value: bson.A{
+				bson.D{{Key: "role.permissions", Value: "request:authorize"}},
+				bson.D{{Key: "permissions", Value: "request:authorize"}},
+				bson.D{{Key: "role.name", Value: "BRANCHAUTHORIZER"}},
+			}},
+		}}},
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "role", Value: 1},
+			{Key: "permissions", Value: 1},
+			{Key: "profile", Value: 1},
+			{Key: "username", Value: 1},
+			{Key: "status", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "updated_at", Value: 1},
+		}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "username", Value: 1}}}},
+	}
+
+	cursor, err := ur.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	if err := cursor.All(ctx, &eligible); err != nil {
+		return nil, err
+	}
+	return &eligible, nil
+}
+
+func hasPerm(perms []string, target string) bool {
+	for _, p := range perms {
+		if p == target {
+			return true
+		}
+	}
+	return false
 }
 
 func (ur *userRepository) Delete(ctx context.Context, user_id primitive.ObjectID, user *model.User) error {

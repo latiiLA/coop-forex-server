@@ -125,5 +125,10 @@ type UserRepository interface {
 	FindAll(c context.Context) (*[]UserResponseDTO, error)
 	FindByID(c context.Context, user_id primitive.ObjectID) (*User, error)
 	Update(c context.Context, user_id primitive.ObjectID, user *User) (*User, error)
+	UpdateStatus(c context.Context, userID primitive.ObjectID, status UserStatus, updatedBy primitive.ObjectID) (*User, error)
+	CountByStatus(c context.Context) (*UserStatusSummary, error)
+	FindEligibleApprovers(c context.Context) (*[]UserResponseDTO, error)
+	// FindEligibleBranchAuthorizers returns active users in the branch with request:authorize.
+	FindEligibleBranchAuthorizers(c context.Context, branchID primitive.ObjectID) (*[]UserResponseDTO, error)
 	Delete(c context.Context, user_id primitive.ObjectID, user *User) error
 }

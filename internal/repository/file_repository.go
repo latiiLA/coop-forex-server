@@ -34,12 +34,21 @@ func (fr *fileRepository) Create(ctx context.Context, file *model.File) (*primit
 
 func (fr *fileRepository) FindByID(ctx context.Context, file_id primitive.ObjectID) (*model.File, error) {
 	var file model.File
-	filter := bson.M{"_id": file_id, "is_deleted": false}
+	filter := bson.M{"_id": file_id}
 
 	err := fr.collection.FindOne(ctx, filter).Decode(&file)
 	if err != nil {
 		return nil, err
 	}
 
+	return &file, nil
+}
+
+func (fr *fileRepository) FindByName(ctx context.Context, name string) (*model.File, error) {
+	var file model.File
+	err := fr.collection.FindOne(ctx, bson.M{"name": name}).Decode(&file)
+	if err != nil {
+		return nil, err
+	}
 	return &file, nil
 }

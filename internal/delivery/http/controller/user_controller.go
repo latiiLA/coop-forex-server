@@ -20,8 +20,14 @@ import (
 type UserController interface {
 	// Register(c *gin.Context)
 	Login(c *gin.Context)
+	Logout(c *gin.Context)
 	GetAllUsers(c *gin.Context)
 	UpdateUser(c *gin.Context)
+	SuspendUser(c *gin.Context)
+	UnsuspendUser(c *gin.Context)
+	GetUserStatusSummary(c *gin.Context)
+	GetEligibleApprovers(c *gin.Context)
+	GetEligibleBranchAuthorizers(c *gin.Context)
 	IP(c *gin.Context)
 	RefreshToken(c *gin.Context)
 }
@@ -35,35 +41,6 @@ func NewUserController(userUsecase usecase.UserUsecase) UserController {
 		userUsecase: userUsecase,
 	}
 }
-
-// func (uc *userController) Register(c *gin.Context) {
-// 	logEntry := utils.GetLogger(c)
-// 	authUserID, err := utils.GetUserID(c)
-// 	if err != nil {
-// 		logEntry.WithField("error", err.Error()).Warn("user id fetch failed")
-// 		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
-// 		return
-// 	}
-
-// 	var registerReq model.RegisterRequestDTO
-
-// 	err = c.ShouldBindJSON(&registerReq)
-// 	if err != nil {
-// 		logEntry.WithField("error", err.Error()).Warn("register data binding failed")
-// 		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
-// 		return
-// 	}
-
-// 	err = uc.userUsecase.Register(c, authUserID, &registerReq)
-// 	if err != nil {
-// 		logEntry.WithField("error", err.Error()).Warn("register failed")
-// 		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
-// 		return
-// 	}
-
-// 	logEntry.Info("user created successfully")
-// 	c.JSON(http.StatusOK, response.SuccessResponse{Message: "User created successfully"})
-// }
 
 func (uc *userController) Login(c *gin.Context) {
 	var userReq model.LoginRequestDTO
@@ -129,6 +106,36 @@ func (uc *userController) Login(c *gin.Context) {
 
 	logEntry.Info("Login Successful")
 	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Login successful", Data: user})
+}
+
+func (uc *userController) Logout(c *gin.Context) {
+	logEntry := utils.GetLogger(c)
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
+		return
+	}
+
+	var body struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	_ = c.ShouldBindJSON(&body)
+
+	accessToken := utils.GetAccessToken(c)
+	if accessToken == "" {
+		authHeader := c.GetHeader("Authorization")
+		if len(authHeader) > 7 {
+			accessToken = authHeader[7:]
+		}
+	}
+
+	if err := uc.userUsecase.Logout(c, authUserID, accessToken, body.RefreshToken, c.ClientIP()); err != nil {
+		logEntry.WithField("error", err.Error()).Warn("logout failed")
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Logged out successfully"})
 }
 
 func (uc *userController) GetAllUsers(c *gin.Context) {
@@ -202,6 +209,125 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 
 	logEntry.Info("user update successful")
 	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "User updated successfully", Data: user})
+}
+
+func (uc *userController) SuspendUser(c *gin.Context) {
+	logEntry := utils.GetLogger(c)
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
+		return
+	}
+
+	userObjID, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: err.Error()})
+		return
+	}
+
+	if err := uc.userUsecase.SuspendUser(c, authUserID, userObjID); err != nil {
+		status := http.StatusInternalServerError
+		message := common.MessInternalServerError
+		switch {
+		case errors.Is(err, common.ErrSelfSuspension):
+			status = http.StatusBadRequest
+			message = err.Error()
+		case errors.Is(err, common.ErrUserNotFound):
+			status = http.StatusNotFound
+			message = err.Error()
+		}
+		logEntry.WithField("error", err.Error()).Warn("suspend failed")
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "User suspended successfully"})
+}
+
+func (uc *userController) UnsuspendUser(c *gin.Context) {
+	logEntry := utils.GetLogger(c)
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
+		return
+	}
+
+	userObjID, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: err.Error()})
+		return
+	}
+
+	if err := uc.userUsecase.UnsuspendUser(c, authUserID, userObjID); err != nil {
+		status := http.StatusInternalServerError
+		message := common.MessInternalServerError
+		switch {
+		case errors.Is(err, common.ErrInvalidUserStatus):
+			status = http.StatusConflict
+			message = err.Error()
+		case errors.Is(err, common.ErrUserNotFound):
+			status = http.StatusNotFound
+			message = err.Error()
+		}
+		logEntry.WithField("error", err.Error()).Warn("unsuspend failed")
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "User unsuspended successfully"})
+}
+
+func (uc *userController) GetUserStatusSummary(c *gin.Context) {
+	summary, err := uc.userUsecase.GetUserStatusSummary(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "User status summary fetched successfully", Data: summary})
+}
+
+func (uc *userController) GetEligibleApprovers(c *gin.Context) {
+	approvers, err := uc.userUsecase.GetEligibleApprovers(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Eligible approvers fetched successfully", Data: approvers})
+}
+
+func (uc *userController) GetEligibleBranchAuthorizers(c *gin.Context) {
+	// Prefer live profile branch over JWT claim (claim can be missing/stale after profile edits).
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
+		return
+	}
+	actor, err := uc.userUsecase.GetUserByID(c, authUserID)
+	if err != nil || actor == nil || actor.Profile == nil {
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "user profile not found"})
+		return
+	}
+
+	var branchID primitive.ObjectID
+	if actor.Profile.BranchID != nil && !actor.Profile.BranchID.IsZero() {
+		branchID = *actor.Profile.BranchID
+	} else {
+		branchID, err = utils.GetBranchID(c)
+		if err != nil || branchID.IsZero() {
+			c.JSON(http.StatusBadRequest, response.Status{
+				Message: common.MessInvalidRequest,
+				Error:   "your profile has no branch; assign a branch before selecting an authorizer",
+			})
+			return
+		}
+	}
+
+	authorizers, err := uc.userUsecase.GetEligibleBranchAuthorizers(c, branchID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Eligible branch authorizers fetched successfully", Data: authorizers})
 }
 
 func (uc *userController) IP(c *gin.Context) {

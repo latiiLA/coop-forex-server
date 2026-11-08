@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -22,8 +23,6 @@ import (
 type RejectRequestPayload struct {
 	RejectionReason string `json:"rejection_reason"`
 }
-
-var payload RejectRequestPayload
 
 type RequestController interface {
 	AddRequest(c *gin.Context)
@@ -53,6 +52,10 @@ type RequestController interface {
 	GetDeclinedOrgRequests(c *gin.Context)
 	GetAuthorizedOrgRequests(c *gin.Context)
 	GetDraftedOrgRequests(c *gin.Context)
+	GetRequestQueue(c *gin.Context)
+	GetRequestStatusSummary(c *gin.Context)
+	GenerateRequestReport(c *gin.Context)
+	ValidateReceipt(c *gin.Context)
 }
 
 type requestController struct {
@@ -65,6 +68,158 @@ func NewRequestController(requestUsecase usecase.RequestUsecase, fileUsecase use
 		requestUsecase: requestUsecase,
 		fileUsecase:    fileUsecase,
 	}
+}
+
+// queueBankPerm / queueOrgPerm map status → required view permission.
+var queueBankPerm = map[string]string{
+	"Authorized": "request:view-authorized",
+	"Validated":  "request:view-validated",
+	"Approved":   "request:view-approved",
+	"Accepted":   "request:view-accepted",
+	"Declined":   "request:view-declined",
+	"Rejected":   "request:view-rejected",
+}
+
+var queueOrgPerm = map[string]string{
+	"Drafted":    "request:view-orgdrafted",
+	"New":        "request:view-new",
+	"Authorized": "request:view-orgauthorized",
+	"Approved":   "request:view-orgapproved",
+	"Accepted":   "request:view-orgaccepted",
+	"Declined":   "request:view-orgdeclined",
+	"Rejected":   "request:view-orgrejected",
+}
+
+func hasAnyPermission(actorPerms []string, required string) bool {
+	for _, p := range actorPerms {
+		if p == required {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveQueueScopeFromPerms picks bank if allowed, else org. Empty = no access.
+func resolveQueueScopeFromPerms(status string, actorPerms []string) string {
+	if bankPerm, ok := queueBankPerm[status]; ok && hasAnyPermission(actorPerms, bankPerm) {
+		return "bank"
+	}
+	if orgPerm, ok := queueOrgPerm[status]; ok && hasAnyPermission(actorPerms, orgPerm) {
+		return "org"
+	}
+	return ""
+}
+
+func resolveOrgFromContext(c *gin.Context) (orgKey string, orgID primitive.ObjectID) {
+	departmentID, _ := utils.GetDepartmentID(c)
+	branchID, _ := utils.GetBranchID(c)
+	if !branchID.IsZero() {
+		return "branch_id", branchID
+	}
+	if !departmentID.IsZero() {
+		return "department_id", departmentID
+	}
+	return "", primitive.NilObjectID
+}
+
+func (rc *requestController) GetRequestQueue(c *gin.Context) {
+	status := c.Query("status")
+	if status == "" {
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: common.MessInvalidRequest,
+			Error:   "status is required",
+		})
+		return
+	}
+
+	actorPerms := utils.GetPermissions(c)
+	scope := resolveQueueScopeFromPerms(status, actorPerms)
+	if scope == "" {
+		// Unknown status, or caller lacks both bank and org view perms for it.
+		if _, bankOK := queueBankPerm[status]; !bankOK {
+			if _, orgOK := queueOrgPerm[status]; !orgOK {
+				c.JSON(http.StatusBadRequest, response.Status{
+					Message: common.MessInvalidRequest,
+					Error:   "invalid status",
+				})
+				return
+			}
+		}
+		c.JSON(http.StatusForbidden, response.Status{Message: common.MessUnauthorized, Error: "permission denied"})
+		return
+	}
+
+	viewerID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
+		return
+	}
+
+	orgKey, orgID := resolveOrgFromContext(c)
+	pageQuery := parsePageQuery(c, 25)
+
+	result, err := rc.requestUsecase.GetRequestQueue(c, status, scope, orgKey, orgID, viewerID, pageQuery)
+	if err != nil {
+		if errors.Is(err, common.ErrInvalidRequest) {
+			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		return
+	}
+
+	if result == nil {
+		result = &model.PaginatedRequests{Items: []model.Request{}}
+	}
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Request queue fetched successfully",
+		Data:         result.Items,
+		Meta: response.PaginationMeta{
+			Total: result.Total,
+			Page:  result.Page,
+			Limit: result.Limit,
+			Scope: scope,
+		},
+	})
+}
+
+func parsePageQuery(c *gin.Context, defaultLimit int) model.PageQuery {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil || c.Query("limit") == "" {
+		limit = defaultLimit
+	}
+	pq := model.NormalizePageQuery(page, limit)
+
+	if from := c.Query("date_from"); from != "" {
+		if t, err := time.Parse(time.RFC3339, from); err == nil {
+			pq.DateFrom = &t
+		}
+	}
+	if to := c.Query("date_to"); to != "" {
+		if t, err := time.Parse(time.RFC3339, to); err == nil {
+			pq.DateTo = &t
+		}
+	}
+
+	return pq
+}
+
+func writePaginatedRequests(c *gin.Context, message string, result *model.PaginatedRequests) {
+	if result == nil {
+		result = &model.PaginatedRequests{Items: []model.Request{}}
+	}
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      message,
+		Data:         result.Items,
+		Meta: response.PaginationMeta{
+			Total: result.Total,
+			Page:  result.Page,
+			Limit: result.Limit,
+		},
+	})
 }
 
 func (rc *requestController) AddRequest(c *gin.Context) {
@@ -166,61 +321,40 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 		os.MkdirAll(uploadPath, os.ModePerm)
 	}
 
-	var passportID *primitive.ObjectID
-	var ticketID *primitive.ObjectID
-	var educationID *primitive.ObjectID
-	var businessLicenseID *primitive.ObjectID
-	var supportingLetterID *primitive.ObjectID
-
-	passport, err := c.FormFile("passport_attachment")
-	if err == nil {
-		passportID, err = rc.fileUsecase.AddFile(c, passport, "passport")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload education file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload education file"})
-			return
+	attachments, uploadErr := rc.uploadRequestAttachments(c)
+	if uploadErr != nil {
+		logEntry.WithField("error", uploadErr.Error()).Warn("Failed to upload request attachment")
+		status := http.StatusInternalServerError
+		message := common.MessInternalServerError
+		if errors.Is(uploadErr, common.ErrInvalidUpload) {
+			status = http.StatusBadRequest
+			message = "Invalid upload file (max 5MB; pdf/jpg/png only)"
 		}
-	}
-	ticket, err := c.FormFile("ticket_attachment")
-	if err == nil {
-		ticketID, err = rc.fileUsecase.AddFile(c, ticket, "ticket")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload ticket file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload ticket file"})
-			return
-		}
-	}
-	education, err := c.FormFile("education_loa_attachment")
-	if err == nil {
-		educationID, err = rc.fileUsecase.AddFile(c, education, "education")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload education file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload education file"})
-			return
-		}
-	}
-	businessLicense, err := c.FormFile("business_license_attachment")
-	if err == nil {
-		businessLicenseID, err = rc.fileUsecase.AddFile(c, businessLicense, "business")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload business license file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload business license file"})
-			return
-		}
-	}
-	supportLetter, err := c.FormFile("business_supporting_letter")
-	if err == nil {
-		supportingLetterID, err = rc.fileUsecase.AddFile(c, supportLetter, "support")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload business letter file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload business letter file"})
-			return
-		}
+		c.JSON(status, response.Status{
+			Message: message,
+			Error:   uploadErr.Error(),
+		})
+		return
 	}
 
 	if len(request.AccountsToDeduct) == 0 {
 		logEntry.Warn("Account to deduct is required")
 		c.JSON(http.StatusBadRequest, response.Status{Message: "Accounts to deduct is required", Error: "accounts_to_deduct is required"})
+		return
+	}
+
+	if fcyAmount <= 0 {
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: "FCY requested amount must be greater than 0",
+			Error:   "fcy_requested_amount must be greater than 0",
+		})
+		return
+	}
+
+	authorizerObjID, err := primitive.ObjectIDFromHex(request.AuthorizerID)
+	if err != nil {
+		logEntry.WithField("error", err.Error()).Warn("Invalid authorizer ID")
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: "Invalid authorizer ID"})
 		return
 	}
 
@@ -240,12 +374,15 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 		RequestingAs:           request.RequestingAs,
 		AccountCurrencyID:      accountCurrencyObjID,
 		FcyRequestedID:         fcyRequestedObjID,
+		AssignedTo:             &authorizerObjID,
 
-		PassportAttachment:           passportID,
-		TicketAttachment:             ticketID,
-		BusinessLicenseAttachment:    businessLicenseID,
-		EducationLoaAttachment:       educationID,
-		BusinessSupportingAttachment: supportingLetterID,
+		PassportAttachment:           attachments.PassportID,
+		TicketAttachment:             attachments.TicketID,
+		VisaAttachment:               attachments.VisaID,
+		BusinessLicenseAttachment:    attachments.BusinessLicenseID,
+		EducationLoaAttachment:       attachments.EducationID,
+		HealthLetterAttachment:       attachments.HealthLetterID,
+		BusinessSupportingAttachment: attachments.SupportingLetterID,
 	}
 
 	err = rc.requestUsecase.AddRequest(c, userID, &fcyRequest)
@@ -262,6 +399,22 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 			status = http.StatusUnauthorized
 			message = common.MessUnauthorized
 
+		case errors.Is(err, common.ErrAccountCurrencyMustBeETB):
+			status = http.StatusBadRequest
+			message = "Account currency must be ETB"
+
+		case errors.Is(err, common.ErrLocalCurrencyNotAllowed):
+			status = http.StatusBadRequest
+			message = "Requested currency cannot be ETB"
+
+		case errors.Is(err, common.ErrInvalidCurrency):
+			status = http.StatusBadRequest
+			message = "Invalid currency"
+
+		case errors.Is(err, common.ErrAssigneeNotEligible):
+			status = http.StatusBadRequest
+			message = "Selected authorizer is not eligible for this branch"
+
 		default:
 			status = http.StatusInternalServerError
 			message = common.MessInternalServerError
@@ -273,17 +426,26 @@ func (rc *requestController) AddRequest(c *gin.Context) {
 	}
 
 	logEntry.Info("Request created successfully")
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Fcy Request created successfully"})
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Fcy Request drafted successfully",
+		Data: gin.H{
+			"_id":          fcyRequest.ID.Hex(),
+			"request_code": fcyRequest.RequestCode,
+			"status":       string(fcyRequest.RequestStatus),
+		},
+	})
 }
 
 func (rc *requestController) GetAllRequests(c *gin.Context) {
-	requests, err := rc.requestUsecase.GetAllRequests(c)
+	pageQuery := parsePageQuery(c, 25)
+	result, err := rc.requestUsecase.GetAllRequests(c, pageQuery)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Requests fetched Successfully", Data: requests})
+	writePaginatedRequests(c, "Requests fetched Successfully", result)
 }
 
 func (rc *requestController) ValidateRequest(c *gin.Context) {
@@ -347,13 +509,29 @@ func (rc *requestController) ValidateRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
+
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
 			message = common.MessRequestLocked
 
+		case errors.Is(err, common.ErrRequestNotAssigned):
+			status = http.StatusConflict
+			message = common.MessRequestNotAssigned
+
 		case errors.Is(err, common.ErrInvalidRequestTransition):
 			status = http.StatusConflict
 			message = "Invalid request status for this action"
+
+		case errors.Is(err, common.ErrAccountCurrencyMustBeETB):
+			status = http.StatusBadRequest
+			message = "Validated account currency must be ETB"
+
+		case errors.Is(err, common.ErrInvalidCurrency):
+			status = http.StatusBadRequest
+			message = "Invalid currency"
 
 		default:
 			status = http.StatusInternalServerError
@@ -500,61 +678,40 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 		os.MkdirAll(uploadPath, os.ModePerm)
 	}
 
-	var passportID *primitive.ObjectID
-	var ticketID *primitive.ObjectID
-	var educationID *primitive.ObjectID
-	var businessLicenseID *primitive.ObjectID
-	var supportingLetterID *primitive.ObjectID
-
-	passport, err := c.FormFile("passport_attachment")
-	if err == nil {
-		passportID, err = rc.fileUsecase.AddFile(c, passport, "passport")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload passport file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload passport file"})
-			return
+	attachments, uploadErr := rc.uploadRequestAttachments(c)
+	if uploadErr != nil {
+		logEntry.WithField("error", uploadErr.Error()).Warn("Failed to upload request attachment")
+		status := http.StatusInternalServerError
+		message := common.MessInternalServerError
+		if errors.Is(uploadErr, common.ErrInvalidUpload) {
+			status = http.StatusBadRequest
+			message = "Invalid upload file (max 5MB; pdf/jpg/png only)"
 		}
-	}
-	ticket, err := c.FormFile("ticket_attachment")
-	if err == nil {
-		ticketID, err = rc.fileUsecase.AddFile(c, ticket, "ticket")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload ticket file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload ticket file"})
-			return
-		}
-	}
-	education, err := c.FormFile("education_loa_attachment")
-	if err == nil {
-		educationID, err = rc.fileUsecase.AddFile(c, education, "education")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload education file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload education file"})
-			return
-		}
-	}
-	businessLicense, err := c.FormFile("business_license_attachment")
-	if err == nil {
-		businessLicenseID, err = rc.fileUsecase.AddFile(c, businessLicense, "business")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload business license file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload business license file"})
-			return
-		}
-	}
-	supportLetter, err := c.FormFile("business_supporting_letter")
-	if err == nil {
-		supportingLetterID, err = rc.fileUsecase.AddFile(c, supportLetter, "support")
-		if err != nil {
-			logEntry.WithField("error", err.Error()).Warn("Failed to upload business letter file")
-			c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: "Failed to upload business letter file"})
-			return
-		}
+		c.JSON(status, response.Status{
+			Message: message,
+			Error:   uploadErr.Error(),
+		})
+		return
 	}
 
 	if len(request.AccountsToDeduct) == 0 {
 		logEntry.Warn("Account to deduct is required")
 		c.JSON(http.StatusBadRequest, response.Status{Message: "accounts_to_deduct is required", Error: "accounts_to_deduct is required"})
+		return
+	}
+
+	if fcyAmount <= 0 {
+		c.JSON(http.StatusBadRequest, response.Status{
+			Message: "FCY requested amount must be greater than 0",
+			Error:   "fcy_requested_amount must be greater than 0",
+		})
+		return
+	}
+
+	authorizerObjID, err := primitive.ObjectIDFromHex(request.AuthorizerID)
+	if err != nil {
+		logEntry.WithField("error", err.Error()).Warn("Invalid authorizer ID")
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: "Invalid authorizer ID"})
 		return
 	}
 
@@ -574,22 +731,29 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 		RequestingAs:           request.RequestingAs,
 		AccountCurrencyID:      accountCurrencyObjID,
 		FcyRequestedID:         fcyRequestedObjID,
+		AssignedTo:             &authorizerObjID,
 	}
 
-	if passportID != &primitive.NilObjectID {
-		fcyRequest.PassportAttachment = passportID
+	if attachments.PassportID != nil {
+		fcyRequest.PassportAttachment = attachments.PassportID
 	}
-	if ticketID != &primitive.NilObjectID {
-		fcyRequest.TicketAttachment = ticketID
+	if attachments.TicketID != nil {
+		fcyRequest.TicketAttachment = attachments.TicketID
 	}
-	if educationID != nil {
-		fcyRequest.EducationLoaAttachment = educationID
+	if attachments.VisaID != nil {
+		fcyRequest.VisaAttachment = attachments.VisaID
 	}
-	if businessLicenseID != nil {
-		fcyRequest.BusinessLicenseAttachment = businessLicenseID
+	if attachments.EducationID != nil {
+		fcyRequest.EducationLoaAttachment = attachments.EducationID
 	}
-	if supportingLetterID != nil {
-		fcyRequest.BusinessSupportingAttachment = supportingLetterID
+	if attachments.BusinessLicenseID != nil {
+		fcyRequest.BusinessLicenseAttachment = attachments.BusinessLicenseID
+	}
+	if attachments.HealthLetterID != nil {
+		fcyRequest.HealthLetterAttachment = attachments.HealthLetterID
+	}
+	if attachments.SupportingLetterID != nil {
+		fcyRequest.BusinessSupportingAttachment = attachments.SupportingLetterID
 	}
 
 	err = rc.requestUsecase.UpdateRequest(c, userID, requestID, &fcyRequest)
@@ -610,6 +774,10 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
+
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
 			message = common.MessRequestLocked
@@ -617,6 +785,22 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrInvalidRequestTransition):
 			status = http.StatusConflict
 			message = "Invalid request status for this action"
+
+		case errors.Is(err, common.ErrAccountCurrencyMustBeETB):
+			status = http.StatusBadRequest
+			message = "Account currency must be ETB"
+
+		case errors.Is(err, common.ErrLocalCurrencyNotAllowed):
+			status = http.StatusBadRequest
+			message = "Requested currency cannot be ETB"
+
+		case errors.Is(err, common.ErrInvalidCurrency):
+			status = http.StatusBadRequest
+			message = "Invalid currency"
+
+		case errors.Is(err, common.ErrAssigneeNotEligible):
+			status = http.StatusBadRequest
+			message = "Selected authorizer is not eligible for this branch"
 
 		default:
 			status = http.StatusInternalServerError
@@ -629,6 +813,64 @@ func (rc *requestController) UpdateRequest(c *gin.Context) {
 
 	logEntry.Info("Request updated successfully")
 	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Fcy Request updated successfully"})
+}
+
+type requestAttachmentIDs struct {
+	PassportID         *primitive.ObjectID
+	TicketID           *primitive.ObjectID
+	VisaID             *primitive.ObjectID
+	EducationID        *primitive.ObjectID
+	BusinessLicenseID  *primitive.ObjectID
+	HealthLetterID     *primitive.ObjectID
+	SupportingLetterID *primitive.ObjectID
+}
+
+// uploadOptionalFormFile uploads a multipart field when present.
+func (rc *requestController) uploadOptionalFormFile(c *gin.Context, field, category string) (*primitive.ObjectID, error) {
+	file, err := c.FormFile(field)
+	if err != nil {
+		return nil, nil
+	}
+	id, err := rc.fileUsecase.AddFile(c, file, category)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload %s: %w", field, err)
+	}
+	return id, nil
+}
+
+func (rc *requestController) uploadRequestAttachments(c *gin.Context) (*requestAttachmentIDs, error) {
+	out := &requestAttachmentIDs{}
+	var err error
+
+	if out.PassportID, err = rc.uploadOptionalFormFile(c, "passport_attachment", "passport"); err != nil {
+		return nil, err
+	}
+	if out.TicketID, err = rc.uploadOptionalFormFile(c, "ticket_attachment", "ticket"); err != nil {
+		return nil, err
+	}
+	if out.VisaID, err = rc.uploadOptionalFormFile(c, "visa_attachment", "visa"); err != nil {
+		return nil, err
+	}
+	if out.EducationID, err = rc.uploadOptionalFormFile(c, "education_loa_attachment", "education"); err != nil {
+		return nil, err
+	}
+	if out.BusinessLicenseID, err = rc.uploadOptionalFormFile(c, "business_license_attachment", "business"); err != nil {
+		return nil, err
+	}
+	if out.HealthLetterID, err = rc.uploadOptionalFormFile(c, "health_letter_attachment", "health"); err != nil {
+		return nil, err
+	}
+	// Prefer canonical field; accept legacy name for older clients.
+	if out.SupportingLetterID, err = rc.uploadOptionalFormFile(c, "business_supporting_attachment", "support"); err != nil {
+		return nil, err
+	}
+	if out.SupportingLetterID == nil {
+		if out.SupportingLetterID, err = rc.uploadOptionalFormFile(c, "business_supporting_letter", "support"); err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
 }
 
 // helper function for approve request
@@ -761,13 +1003,29 @@ func (rc *requestController) ApproveRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
+
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
 			message = common.MessRequestLocked
 
+		case errors.Is(err, common.ErrRequestNotAssigned):
+			status = http.StatusConflict
+			message = common.MessRequestNotAssigned
+
 		case errors.Is(err, common.ErrInvalidRequestTransition):
 			status = http.StatusConflict
 			message = "Invalid request status for this action"
+
+		case errors.Is(err, common.ErrLocalCurrencyNotAllowed):
+			status = http.StatusBadRequest
+			message = "Approved currency cannot be ETB"
+
+		case errors.Is(err, common.ErrInvalidCurrency):
+			status = http.StatusBadRequest
+			message = "Invalid approved currency"
 
 		default:
 			status = http.StatusInternalServerError
@@ -782,36 +1040,27 @@ func (rc *requestController) ApproveRequest(c *gin.Context) {
 }
 
 func (rc *requestController) GetAllOrgRequests(c *gin.Context) {
-	departmentID, err := utils.GetDepartmentID(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
+	orgKey, orgID := resolveOrgFromContext(c)
+	pageQuery := parsePageQuery(c, 25)
+
+	// Head-office tokens have no branch/department: return empty (do not 400).
+	if orgKey == "" || orgID.IsZero() {
+		writePaginatedRequests(c, "All Org requests fetched successfully", &model.PaginatedRequests{
+			Items: []model.Request{},
+			Total: 0,
+			Page:  pageQuery.Page,
+			Limit: pageQuery.Limit,
+		})
 		return
 	}
 
-	branchID, err := utils.GetBranchID(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
-		return
-	}
-
-	var orgRequests interface{}
-
-	if !branchID.IsZero() {
-		orgRequests, err = rc.requestUsecase.GetAllOrgRequests(c, "branch_id", branchID)
-	} else if !departmentID.IsZero() {
-		orgRequests, err = rc.requestUsecase.GetAllOrgRequests(c, "department_id", departmentID)
-	} else {
-		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "Invalid orgKey. Must be 'branchID' or 'departmentID'"})
-		return
-	}
-
+	result, err := rc.requestUsecase.GetAllOrgRequests(c, orgKey, orgID, pageQuery)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "All Org requests fetched successfully", Data: orgRequests})
-
+	writePaginatedRequests(c, "All Org requests fetched successfully", result)
 }
 
 func (rc *requestController) GetAuthorizedRequests(c *gin.Context) {
@@ -827,13 +1076,13 @@ func (rc *requestController) GetAuthorizedRequests(c *gin.Context) {
 		return
 	}
 
-	requests, err := rc.requestUsecase.GetAuthorizedRequests(c)
+	result, err := rc.requestUsecase.GetAuthorizedRequests(c, model.PageQuery{Page: 1, Limit: 0})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Authorized requests fetched successfully", Data: requests})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Authorized requests fetched successfully", Data: result.Items})
 }
 
 func (rc *requestController) GetNewOrgRequests(c *gin.Context) {
@@ -850,9 +1099,8 @@ func (rc *requestController) GetNewOrgRequests(c *gin.Context) {
 	}
 
 	var (
-		newOrgRequests interface{}
-		orgKey         string
-		orgID          primitive.ObjectID
+		orgKey string
+		orgID  primitive.ObjectID
 	)
 
 	if !branchID.IsZero() {
@@ -866,13 +1114,13 @@ func (rc *requestController) GetNewOrgRequests(c *gin.Context) {
 		return
 	}
 
-	newOrgRequests, err = rc.requestUsecase.GetNewOrgRequests(c, orgKey, orgID)
+	result, err := rc.requestUsecase.GetNewOrgRequests(c, orgKey, orgID, model.PageQuery{Page: 1, Limit: 0})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "New Org requests fetched successfully", Data: newOrgRequests})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "New Org requests fetched successfully", Data: result.Items})
 }
 
 func (rc *requestController) GetRejectedOrgRequests(c *gin.Context) {
@@ -889,9 +1137,8 @@ func (rc *requestController) GetRejectedOrgRequests(c *gin.Context) {
 	}
 
 	var (
-		newOrgRequests interface{}
-		orgKey         string
-		orgID          primitive.ObjectID
+		orgKey string
+		orgID  primitive.ObjectID
 	)
 
 	if !branchID.IsZero() {
@@ -905,23 +1152,23 @@ func (rc *requestController) GetRejectedOrgRequests(c *gin.Context) {
 		return
 	}
 
-	newOrgRequests, err = rc.requestUsecase.GetRejectedOrgRequests(c, orgKey, orgID)
+	result, err := rc.requestUsecase.GetRejectedOrgRequests(c, orgKey, orgID, parsePageQuery(c, 25))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Rejected requests fetched successfully", Data: newOrgRequests})
+	writePaginatedRequests(c, "Rejected requests fetched successfully", result)
 }
 
 func (rc *requestController) GetRejectedRequests(c *gin.Context) {
-	rejectedRequests, err := rc.requestUsecase.GetRejectedRequests(c)
+	result, err := rc.requestUsecase.GetRejectedRequests(c, parsePageQuery(c, 25))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Rejected Org requests fetched successfully", Data: rejectedRequests})
+	writePaginatedRequests(c, "Rejected Org requests fetched successfully", result)
 }
 
 func (rc *requestController) GetApprovedOrgRequests(c *gin.Context) {
@@ -938,9 +1185,8 @@ func (rc *requestController) GetApprovedOrgRequests(c *gin.Context) {
 	}
 
 	var (
-		approvedOrgRequests interface{}
-		orgKey              string
-		orgID               primitive.ObjectID
+		orgKey string
+		orgID  primitive.ObjectID
 	)
 
 	if !branchID.IsZero() {
@@ -954,13 +1200,13 @@ func (rc *requestController) GetApprovedOrgRequests(c *gin.Context) {
 		return
 	}
 
-	approvedOrgRequests, err = rc.requestUsecase.GetApprovedOrgRequests(c, orgKey, orgID)
+	result, err := rc.requestUsecase.GetApprovedOrgRequests(c, orgKey, orgID, parsePageQuery(c, 25))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Approved Org requests fetched successfully", Data: approvedOrgRequests})
+	writePaginatedRequests(c, "Approved Org requests fetched successfully", result)
 }
 
 func (rc *requestController) GetAcceptedOrgRequests(c *gin.Context) {
@@ -977,9 +1223,8 @@ func (rc *requestController) GetAcceptedOrgRequests(c *gin.Context) {
 	}
 
 	var (
-		orgRequests interface{}
-		orgKey      string
-		orgID       primitive.ObjectID
+		orgKey string
+		orgID  primitive.ObjectID
 	)
 
 	if !branchID.IsZero() {
@@ -993,14 +1238,14 @@ func (rc *requestController) GetAcceptedOrgRequests(c *gin.Context) {
 		return
 	}
 
-	orgRequests, err = rc.requestUsecase.GetAcceptedOrgRequests(c, orgKey, orgID)
+	result, err := rc.requestUsecase.GetAcceptedOrgRequests(c, orgKey, orgID, parsePageQuery(c, 25))
 	if err != nil {
 
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Accepted Org requests fetched successfully", Data: orgRequests})
+	writePaginatedRequests(c, "Accepted Org requests fetched successfully", result)
 }
 
 func (rc *requestController) GetDeclinedOrgRequests(c *gin.Context) {
@@ -1017,9 +1262,8 @@ func (rc *requestController) GetDeclinedOrgRequests(c *gin.Context) {
 	}
 
 	var (
-		orgRequests interface{}
-		orgKey      string
-		orgID       primitive.ObjectID
+		orgKey string
+		orgID  primitive.ObjectID
 	)
 
 	if !branchID.IsZero() {
@@ -1033,13 +1277,13 @@ func (rc *requestController) GetDeclinedOrgRequests(c *gin.Context) {
 		return
 	}
 
-	orgRequests, err = rc.requestUsecase.GetDeclinedOrgRequests(c, orgKey, orgID)
+	result, err := rc.requestUsecase.GetDeclinedOrgRequests(c, orgKey, orgID, parsePageQuery(c, 25))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Declined Org requests fetched successfully", Data: orgRequests})
+	writePaginatedRequests(c, "Declined Org requests fetched successfully", result)
 }
 
 func (rc *requestController) GetAuthorizedOrgRequests(c *gin.Context) {
@@ -1056,9 +1300,8 @@ func (rc *requestController) GetAuthorizedOrgRequests(c *gin.Context) {
 	}
 
 	var (
-		orgRequests interface{}
-		orgKey      string
-		orgID       primitive.ObjectID
+		orgKey string
+		orgID  primitive.ObjectID
 	)
 
 	if !branchID.IsZero() {
@@ -1072,52 +1315,32 @@ func (rc *requestController) GetAuthorizedOrgRequests(c *gin.Context) {
 		return
 	}
 
-	orgRequests, err = rc.requestUsecase.GetAuthorizedOrgRequests(c, orgKey, orgID)
+	result, err := rc.requestUsecase.GetAuthorizedOrgRequests(c, orgKey, orgID, model.PageQuery{Page: 1, Limit: 0})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Authorized Org requests", Data: orgRequests})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Authorized Org requests", Data: result.Items})
 }
 
 func (rc *requestController) GetDraftedOrgRequests(c *gin.Context) {
-	departmentID, err := utils.GetDepartmentID(c)
+	viewerID, err := utils.GetUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
 		return
 	}
 
-	branchID, err := utils.GetBranchID(c)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
-		return
-	}
-
-	var (
-		orgRequests interface{}
-		orgKey      string
-		orgID       primitive.ObjectID
+	orgKey, orgID := resolveOrgFromContext(c)
+	result, err := rc.requestUsecase.GetRequestQueue(
+		c, string(model.ReqStatusDrafted), "org", orgKey, orgID, viewerID, model.PageQuery{Page: 1, Limit: 0},
 	)
-
-	if !branchID.IsZero() {
-		orgKey = "branch_id"
-		orgID = branchID
-	} else if !departmentID.IsZero() {
-		orgKey = "department_id"
-		orgID = departmentID
-	} else {
-		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "Invalid organization context"})
-		return
-	}
-
-	orgRequests, err = rc.requestUsecase.GetDraftedOrgRequests(c, orgKey, orgID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Drafted requests fetched successfully", Data: orgRequests})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Drafted requests fetched successfully", Data: result.Items})
 }
 
 func (rc *requestController) AuthorizeOrgRequest(c *gin.Context) {
@@ -1151,6 +1374,22 @@ func (rc *requestController) AuthorizeOrgRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestNotFound):
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrUnauthorized):
+			status = http.StatusForbidden
+			message = common.MessUnauthorized
+
+		case errors.Is(err, common.ErrRequestNotAssigned):
+			status = http.StatusConflict
+			message = common.MessRequestNotAssigned
+
+		case errors.Is(err, common.ErrRequestIsLocked):
+			status = http.StatusConflict
+			message = common.MessRequestLocked
+
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
 
 		case errors.Is(err, common.ErrInvalidRequestTransition):
 			status = http.StatusConflict
@@ -1188,6 +1427,7 @@ func (rc *requestController) RejectRequest(c *gin.Context) {
 		return
 	}
 
+	var payload RejectRequestPayload
 	err = c.ShouldBind(&payload)
 	if err != nil {
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
@@ -1224,6 +1464,10 @@ func (rc *requestController) RejectRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestNotFound):
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
 
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
@@ -1407,7 +1651,8 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 		return
 	}
 
-	err = rc.requestUsecase.AcceptRequest(c, authUserID, requestID, &request)
+	processingBranchID, _ := utils.GetBranchID(c)
+	err = rc.requestUsecase.AcceptRequest(c, authUserID, requestID, &request, processingBranchID)
 	if err != nil {
 		var (
 			status  int
@@ -1418,6 +1663,10 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrRequestNotFound):
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
+
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
 
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
@@ -1434,6 +1683,14 @@ func (rc *requestController) AcceptRequest(c *gin.Context) {
 		case errors.Is(err, common.ErrInvalidAcceptedAmount):
 			status = http.StatusBadRequest
 			message = "Accepted amount cannot be greater than approved amount"
+
+		case errors.Is(err, common.ErrLocalCurrencyNotAllowed):
+			status = http.StatusBadRequest
+			message = "Accepted currency cannot be ETB"
+
+		case errors.Is(err, common.ErrInvalidCurrency):
+			status = http.StatusBadRequest
+			message = "Invalid accepted currency"
 
 		default:
 			status = http.StatusInternalServerError
@@ -1543,44 +1800,72 @@ func (rc *requestController) DeclineOrgRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request declined successfully"})
 }
 
-func (rc *requestController) GetValidatedRequests(c *gin.Context) {
-	requests, err := rc.requestUsecase.GetValidatedRequests(c)
+func (rc *requestController) GetRequestStatusSummary(c *gin.Context) {
+	departmentID, _ := utils.GetDepartmentID(c)
+	branchID, _ := utils.GetBranchID(c)
+
+	orgKey := ""
+	orgID := primitive.NilObjectID
+	scope := c.DefaultQuery("scope", "bank")
+	if scope == "org" {
+		if !branchID.IsZero() {
+			orgKey = "branch_id"
+			orgID = branchID
+		} else if !departmentID.IsZero() {
+			orgKey = "department_id"
+			orgID = departmentID
+		}
+		// No branch/department on token (typical for head-office admins):
+		// fall back to bank-wide summary instead of 400.
+	}
+
+	summary, err := rc.requestUsecase.GetRequestStatusSummary(c, orgKey, orgID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Validated requests fetched successfully", Data: requests})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request summary fetched successfully", Data: summary})
+}
+
+func (rc *requestController) GetValidatedRequests(c *gin.Context) {
+	result, err := rc.requestUsecase.GetValidatedRequests(c, model.PageQuery{Page: 1, Limit: 0})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Validated requests fetched successfully", Data: result.Items})
 }
 
 func (rc *requestController) GetApprovedRequests(c *gin.Context) {
-	requests, err := rc.requestUsecase.GetApprovedRequests(c)
+	result, err := rc.requestUsecase.GetApprovedRequests(c, parsePageQuery(c, 25))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Approved requests fetched successfully", Data: requests})
+	writePaginatedRequests(c, "Approved requests fetched successfully", result)
 }
 
 func (rc *requestController) GetAcceptedRequests(c *gin.Context) {
-	requests, err := rc.requestUsecase.GetAcceptedRequests(c)
+	result, err := rc.requestUsecase.GetAcceptedRequests(c, parsePageQuery(c, 25))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Message: common.MessInternalServerError, Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Accepted requests fetched successfully", Data: requests})
+	writePaginatedRequests(c, "Accepted requests fetched successfully", result)
 }
 
 func (rc *requestController) GetDeclinedRequests(c *gin.Context) {
-	requests, err := rc.requestUsecase.GetDeclinedRequests(c)
+	result, err := rc.requestUsecase.GetDeclinedRequests(c, parsePageQuery(c, 25))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response.Status{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Declined requests fetched successfully", Data: requests})
+	writePaginatedRequests(c, "Declined requests fetched successfully", result)
 }
 
 func (rc *requestController) LockRequest(c *gin.Context) {
@@ -1603,7 +1888,21 @@ func (rc *requestController) LockRequest(c *gin.Context) {
 		return
 	}
 
-	err = rc.requestUsecase.LockRequest(c, authUserID, requestID)
+	var dto model.AssignRequestDTO
+	_ = c.ShouldBindJSON(&dto)
+
+	var assigneeID *primitive.ObjectID
+	if dto.AssigneeID != nil && *dto.AssigneeID != "" {
+		oid, parseErr := primitive.ObjectIDFromHex(*dto.AssigneeID)
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: parseErr.Error()})
+			return
+		}
+		assigneeID = &oid
+	}
+
+	actorPerms := utils.GetPermissions(c)
+	result, err := rc.requestUsecase.AssignRequest(c, authUserID, requestID, assigneeID, actorPerms)
 	if err != nil {
 		var (
 			status  int
@@ -1615,13 +1914,29 @@ func (rc *requestController) LockRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
+
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
 			message = common.MessRequestLocked
 
+		case errors.Is(err, common.ErrRequestNotAssigned):
+			status = http.StatusConflict
+			message = common.MessRequestNotAssigned
+
 		case errors.Is(err, common.ErrInvalidRequestTransition):
 			status = http.StatusConflict
 			message = "Invalid request status for this action"
+
+		case errors.Is(err, common.ErrSelfAssignOnly):
+			status = http.StatusForbidden
+			message = err.Error()
+
+		case errors.Is(err, common.ErrAssigneeNotEligible):
+			status = http.StatusBadRequest
+			message = err.Error()
 
 		default:
 			status = http.StatusInternalServerError
@@ -1632,7 +1947,7 @@ func (rc *requestController) LockRequest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request locked successfully"})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request assigned successfully", Data: result})
 }
 
 func (rc *requestController) UnLockRequest(c *gin.Context) {
@@ -1656,7 +1971,8 @@ func (rc *requestController) UnLockRequest(c *gin.Context) {
 		return
 	}
 
-	err = rc.requestUsecase.UnLockRequest(c, authUserID, requestID)
+	actorPerms := utils.GetPermissions(c)
+	err = rc.requestUsecase.UnassignRequest(c, authUserID, requestID, actorPerms)
 	if err != nil {
 		var (
 			status  int
@@ -1668,9 +1984,17 @@ func (rc *requestController) UnLockRequest(c *gin.Context) {
 			status = http.StatusNotFound
 			message = common.MessRequestNotFound
 
+		case errors.Is(err, common.ErrRequestConflict):
+			status = http.StatusConflict
+			message = common.MessRequestConflict
+
 		case errors.Is(err, common.ErrRequestIsLocked):
 			status = http.StatusConflict
 			message = common.MessRequestLocked
+
+		case errors.Is(err, common.ErrRequestNotAssigned):
+			status = http.StatusConflict
+			message = common.MessRequestNotAssigned
 
 		case errors.Is(err, common.ErrInvalidRequestTransition):
 			status = http.StatusConflict
@@ -1685,5 +2009,78 @@ func (rc *requestController) UnLockRequest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request unlock successful"})
+	c.JSON(http.StatusOK, response.Status{IsSuccessful: true, Message: "Request unassigned successfully"})
 }
+
+func (rc *requestController) GenerateRequestReport(c *gin.Context) {
+	authUserID, err := utils.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, response.Status{Message: common.MessUnauthorized, Error: err.Error()})
+		return
+	}
+
+	requestIDStr := c.Param("id")
+	if requestIDStr == "" {
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "request ID is required"})
+		return
+	}
+
+	requestID, err := primitive.ObjectIDFromHex(requestIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequestData, Error: err.Error()})
+		return
+	}
+
+	pdfBytes, filename, receiptNumber, err := rc.requestUsecase.GenerateRequestReport(c, authUserID, requestID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		message := common.MessInternalServerError
+		switch {
+		case errors.Is(err, common.ErrUnauthorized):
+			status = http.StatusUnauthorized
+			message = common.MessUnauthorized
+		case errors.Is(err, common.ErrRequestNotFound):
+			status = http.StatusNotFound
+			message = common.MessRequestNotFound
+		case errors.Is(err, common.ErrInvalidRequestTransition):
+			status = http.StatusConflict
+			message = "Report can only be generated for accepted requests"
+		}
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
+	c.Header("X-Receipt-Number", receiptNumber)
+	c.Data(http.StatusOK, "application/pdf", pdfBytes)
+}
+
+func (rc *requestController) ValidateReceipt(c *gin.Context) {
+	receiptNumber := c.Param("receiptNumber")
+	if strings.TrimSpace(receiptNumber) == "" {
+		c.JSON(http.StatusBadRequest, response.Status{Message: common.MessInvalidRequest, Error: "receipt number is required"})
+		return
+	}
+
+	receipt, comparison, err := rc.requestUsecase.ValidateReceipt(c, receiptNumber)
+	if err != nil {
+		status := http.StatusInternalServerError
+		message := common.MessInternalServerError
+		if errors.Is(err, common.ErrReceiptNotFound) {
+			status = http.StatusNotFound
+			message = "Receipt not found"
+		}
+		c.JSON(status, response.Status{Message: message, Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response.Status{
+		IsSuccessful: true,
+		Message:      "Receipt linked request found",
+		Data: gin.H{
+			"request":    receipt,
+			"comparison": comparison,
+		},
+	})
+}
+

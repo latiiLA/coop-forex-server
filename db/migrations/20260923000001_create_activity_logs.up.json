@@ -1,0 +1,30 @@
+[
+  {
+    "create": "activity_logs",
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["actor_id", "action", "entity_type", "created_at"],
+        "properties": {
+          "actor_id": { "bsonType": "objectId" },
+          "action": { "bsonType": "string" },
+          "entity_type": { "bsonType": "string" },
+          "entity_id": { "bsonType": ["objectId", "null"] },
+          "description": { "bsonType": "string" },
+          "from_state": { "bsonType": "string" },
+          "to_state": { "bsonType": "string" },
+          "metadata": { "bsonType": "object" },
+          "dedupe_key": { "bsonType": "string" },
+          "created_at": { "bsonType": "date" }
+        }
+      }
+    }
+  },
+  {
+    "createIndexes": "activity_logs",
+    "indexes": [
+      { "key": { "created_at": -1 }, "name": "idx_activity_created_at" },
+      { "key": { "dedupe_key": 1 }, "name": "uniq_activity_dedupe_key", "unique": true, "sparse": true }
+    ]
+  }
+]

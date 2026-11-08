@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jinzhu/copier"
 	"github.com/latiiLA/coop-forex-server/internal/common"
 	"github.com/latiiLA/coop-forex-server/internal/domain/model"
@@ -19,10 +20,16 @@ import (
 type UserUsecase interface {
 	Register(c context.Context, authUserID primitive.ObjectID, registerReq *model.RegisterUsecaseRequestDTO) error
 	Login(c context.Context, userReq model.LoginRequestDTO, ip string) (*model.LoginResponseDTO, error)
+	Logout(c context.Context, userID primitive.ObjectID, accessToken string, refreshToken string, clientIP string) error
 	GetUserByID(c context.Context, userID primitive.ObjectID) (*model.User, error)
 	UpdateUserByID(c context.Context, userID primitive.ObjectID, authUserID primitive.ObjectID, user *model.UpdateUserRequestDTO) (*model.UserResponseDTO, error)
 	GetAllUsers(c context.Context) (*[]model.UserResponseDTO, error)
 	RefreshToken(c context.Context, refresh model.RefreshTokenDTO, clientIP string) (string, string, error)
+	SuspendUser(c context.Context, authUserID, targetUserID primitive.ObjectID) error
+	UnsuspendUser(c context.Context, authUserID, targetUserID primitive.ObjectID) error
+	GetUserStatusSummary(c context.Context) (*model.UserStatusSummary, error)
+	GetEligibleApprovers(c context.Context) (*[]model.UserResponseDTO, error)
+	GetEligibleBranchAuthorizers(c context.Context, branchID primitive.ObjectID) (*[]model.UserResponseDTO, error)
 }
 
 type userUsecase struct {
@@ -30,16 +37,26 @@ type userUsecase struct {
 	roleRepository     model.RoleRepository
 	profileRepository  model.ProfileRepository
 	tokenBlacklistRepo model.TokenBlacklistRepository
+	activityLog        model.ActivityLogUsecase
 	contextTimeout     time.Duration
 	client             *mongo.Client
 }
 
-func NewUserUsecase(userRepository model.UserRepository, roleRepository model.RoleRepository, profileRepository model.ProfileRepository, tokenBlacklistRepo model.TokenBlacklistRepository, timeout time.Duration, client *mongo.Client) UserUsecase {
+func NewUserUsecase(
+	userRepository model.UserRepository,
+	roleRepository model.RoleRepository,
+	profileRepository model.ProfileRepository,
+	tokenBlacklistRepo model.TokenBlacklistRepository,
+	activityLog model.ActivityLogUsecase,
+	timeout time.Duration,
+	client *mongo.Client,
+) UserUsecase {
 	return &userUsecase{
 		userRepository:     userRepository,
 		roleRepository:     roleRepository,
 		profileRepository:  profileRepository,
 		tokenBlacklistRepo: tokenBlacklistRepo,
+		activityLog:        activityLog,
 		contextTimeout:     timeout,
 		client:             client,
 	}
@@ -57,6 +74,8 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 	if err == nil && existingUser.Username != "" {
 		return common.ErrUsernameAlreadyExists
 	}
+
+	var createdUserID primitive.ObjectID
 
 	// start MongoDB session
 	session, err := uc.client.StartSession()
@@ -109,10 +128,25 @@ func (uc *userUsecase) Register(c context.Context, authUserID primitive.ObjectID
 			return err
 		}
 
+		createdUserID = user.ID
 		return session.CommitTransaction(sessCtx)
 	})
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	entityID := createdUserID
+	LogActivity(uc.activityLog, ctx, model.ActivityLogInput{
+		ActorID:     authUserID,
+		Action:      model.ActionUserCreate,
+		EntityType:  model.EntityUser,
+		EntityID:    &entityID,
+		Description: "User created",
+		ToState:     string(model.StatusNew),
+	})
+
+	return nil
 }
 
 func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, ip string) (*model.LoginResponseDTO, error) {
@@ -166,14 +200,6 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		return nil, err
 	}
 
-	// Update last login
-	// var now = time.Now()
-	// existingUser.LastLogin = &now
-
-	// if _, err := uc.userRepository.Update(ctx, existingUser.ID, existingUser); err != nil {
-	// 	return nil, fmt.Errorf("user login failed %s", err)
-	// }
-
 	response := model.LoginResponseDTO{
 		ID:           existingUser.ID,
 		FirstName:    existingUser.Profile.FirstName,
@@ -187,7 +213,72 @@ func (uc *userUsecase) Login(c context.Context, userReq model.LoginRequestDTO, i
 		RefreshToken: refeshToken,
 	}
 
+	actorID := existingUser.ID
+	LogActivity(uc.activityLog, ctx, model.ActivityLogInput{
+		ActorID:     actorID,
+		Action:      model.ActionLogin,
+		EntityType:  model.EntityAuth,
+		EntityID:    &actorID,
+		Description: "User logged in",
+		Metadata: map[string]any{
+			"ip": ip,
+		},
+	})
+
 	return &response, nil
+}
+
+func (uc *userUsecase) Logout(c context.Context, userID primitive.ObjectID, accessToken string, refreshToken string, clientIP string) error {
+	ctx, cancel := context.WithTimeout(c, uc.contextTimeout)
+	defer cancel()
+
+	if accessToken != "" && uc.tokenBlacklistRepo != nil {
+		expTime, err := parseJWTExpiry(accessToken)
+		if err != nil {
+			return err
+		}
+		if err := uc.tokenBlacklistRepo.BlacklistToken(ctx, accessToken, expTime, userID, clientIP); err != nil {
+			return err
+		}
+	}
+
+	if refreshToken != "" && uc.tokenBlacklistRepo != nil {
+		expTime, err := parseJWTExpiry(refreshToken)
+		if err == nil {
+			_ = uc.tokenBlacklistRepo.BlacklistToken(ctx, refreshToken, expTime, userID, clientIP)
+		}
+	}
+
+	entityID := userID
+	LogActivity(uc.activityLog, ctx, model.ActivityLogInput{
+		ActorID:     userID,
+		Action:      model.ActionLogout,
+		EntityType:  model.EntityAuth,
+		EntityID:    &entityID,
+		Description: "User logged out",
+		Metadata: map[string]any{
+			"ip": clientIP,
+		},
+	})
+
+	return nil
+}
+
+func parseJWTExpiry(tokenString string) (time.Time, error) {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	token, _, err := parser.ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid token: %w", err)
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return time.Time{}, fmt.Errorf("invalid token claims")
+	}
+	expUnix, ok := claims["exp"].(float64)
+	if !ok {
+		return time.Time{}, fmt.Errorf("invalid expiration in token")
+	}
+	return time.Unix(int64(expUnix), 0), nil
 }
 
 func (uc *userUsecase) GetUserByID(ctx context.Context, user_id primitive.ObjectID) (*model.User, error) {
@@ -238,16 +329,6 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 		if user.LastName != "" {
 			existingProfile.LastName = user.LastName
 		}
-		// if user.Email != "" {
-		// 	existingProfileByEmail, err := uc.profileRepository.FindByEmail(sessCtx, user.Email)
-		// 	if err != nil && err != mongo.ErrNoDocuments {
-		// 		return err
-		// 	}
-		// 	if existingProfileByEmail != nil && existingProfileByEmail.ID != user_id {
-		// 		return errors.New("email already exists")
-		// 	}
-		// 	existingProfile.Email = user.Email
-		// }
 		if user.BranchID != &primitive.NilObjectID {
 			existingProfile.DepartmentID = nil
 			existingProfile.BranchID = user.BranchID
@@ -302,6 +383,16 @@ func (uc *userUsecase) UpdateUserByID(ctx context.Context, user_id primitive.Obj
 	if err != nil {
 		return nil, err
 	}
+
+	entityID := user_id
+	LogActivity(uc.activityLog, ctx, model.ActivityLogInput{
+		ActorID:     authUserID,
+		Action:      model.ActionUserUpdate,
+		EntityType:  model.EntityUser,
+		EntityID:    &entityID,
+		Description: "User updated",
+	})
+
 	return &responseUser, nil
 }
 
@@ -309,6 +400,86 @@ func (uc *userUsecase) GetAllUsers(ctx context.Context) (*[]model.UserResponseDT
 	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
 	defer cancel()
 	return uc.userRepository.FindAll(ctx)
+}
+
+func (uc *userUsecase) SuspendUser(ctx context.Context, authUserID, targetUserID primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+
+	if authUserID == targetUserID {
+		return common.ErrSelfSuspension
+	}
+
+	existing, err := uc.userRepository.FindByID(ctx, targetUserID)
+	if err != nil || existing == nil {
+		return common.ErrUserNotFound
+	}
+
+	fromStatus := string(existing.Status)
+	if _, err := uc.userRepository.UpdateStatus(ctx, targetUserID, model.StatusSuspended, authUserID); err != nil {
+		return err
+	}
+
+	entityID := targetUserID
+	LogActivity(uc.activityLog, ctx, model.ActivityLogInput{
+		ActorID:     authUserID,
+		Action:      model.ActionUserSuspend,
+		EntityType:  model.EntityUser,
+		EntityID:    &entityID,
+		Description: "User suspended",
+		FromState:   fromStatus,
+		ToState:     string(model.StatusSuspended),
+	})
+	return nil
+}
+
+func (uc *userUsecase) UnsuspendUser(ctx context.Context, authUserID, targetUserID primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+
+	existing, err := uc.userRepository.FindByID(ctx, targetUserID)
+	if err != nil || existing == nil {
+		return common.ErrUserNotFound
+	}
+
+	if existing.Status != model.StatusSuspended {
+		return common.ErrInvalidUserStatus
+	}
+
+	fromStatus := string(existing.Status)
+	if _, err := uc.userRepository.UpdateStatus(ctx, targetUserID, model.StatusActive, authUserID); err != nil {
+		return err
+	}
+
+	entityID := targetUserID
+	LogActivity(uc.activityLog, ctx, model.ActivityLogInput{
+		ActorID:     authUserID,
+		Action:      model.ActionUserUnsuspend,
+		EntityType:  model.EntityUser,
+		EntityID:    &entityID,
+		Description: "User unsuspended",
+		FromState:   fromStatus,
+		ToState:     string(model.StatusActive),
+	})
+	return nil
+}
+
+func (uc *userUsecase) GetUserStatusSummary(ctx context.Context) (*model.UserStatusSummary, error) {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+	return uc.userRepository.CountByStatus(ctx)
+}
+
+func (uc *userUsecase) GetEligibleApprovers(ctx context.Context) (*[]model.UserResponseDTO, error) {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+	return uc.userRepository.FindEligibleApprovers(ctx)
+}
+
+func (uc *userUsecase) GetEligibleBranchAuthorizers(ctx context.Context, branchID primitive.ObjectID) (*[]model.UserResponseDTO, error) {
+	ctx, cancel := context.WithTimeout(ctx, uc.contextTimeout)
+	defer cancel()
+	return uc.userRepository.FindEligibleBranchAuthorizers(ctx, branchID)
 }
 
 func (a *userUsecase) RefreshToken(ctx context.Context, refreshToken model.RefreshTokenDTO, clientIP string) (string, string, error) {
@@ -377,10 +548,12 @@ func (a *userUsecase) RefreshToken(ctx context.Context, refreshToken model.Refre
 		departmentID = *user.Profile.DepartmentID
 	}
 
-	permissions := []string{}
+	userPerms := []string{}
 	if user.Permissions != nil {
-		permissions = user.Permissions
+		userPerms = user.Permissions
 	}
+	// Must include role permissions (same as Login) or refreshed tokens lose request:send/etc.
+	permissions := utils.MergePermissions(role.Permissions, userPerms)
 
 	newAccessToken, err := infrastructure.GenerateToken(user.ID, role.Name, branchID, departmentID, permissions, clientIP)
 	if err != nil {
