@@ -25,6 +25,7 @@ var (
 	ErrInvalidUserStatus = errors.New("invalid user status for this action")
 	ErrAssigneeNotEligible = errors.New("assignee is not an eligible approver")
 	ErrSelfAssignOnly = errors.New("you can only assign this request to yourself")
+	ErrCannotActOnOwnRequest = errors.New("cannot perform this action on a request you created")
 
 	ErrRequestNotFound            = errors.New("request not found")
 	ErrRequestIsLocked            = errors.New("request is already assigned to another user")
@@ -54,4 +55,5 @@ var (
 	MessRequestNotAssigned  = "Assign the request to yourself first"
 	MessRequestNotFound     = "Request not found"
 	MessRequestConflict     = "Request was modified by another action; refresh and retry"
+	MessCannotActOnOwnRequest = "You cannot perform this action on a request you created"
 )

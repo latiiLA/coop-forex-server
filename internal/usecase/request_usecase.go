@@ -61,6 +61,7 @@ type requestUsecase struct {
 	userRepository     model.UserRepository
 	receiptRepository  model.ReceiptRepository
 	currencyRepository model.CurrencyRepository
+	branchRepository   model.BranchRepository
 	activityLog        model.ActivityLogUsecase
 	contextTimeout     time.Duration
 }
@@ -70,6 +71,7 @@ func NewRequestUsecase(
 	userRepository model.UserRepository,
 	receiptRepository model.ReceiptRepository,
 	currencyRepository model.CurrencyRepository,
+	branchRepository model.BranchRepository,
 	activityLog model.ActivityLogUsecase,
 	timeout time.Duration,
 ) RequestUsecase {
@@ -78,6 +80,7 @@ func NewRequestUsecase(
 		userRepository:     userRepository,
 		receiptRepository:  receiptRepository,
 		currencyRepository: currencyRepository,
+		branchRepository:   branchRepository,
 		activityLog:        activityLog,
 		contextTimeout:     timeout,
 	}
@@ -130,6 +133,49 @@ func ensureSameOrgOrCreator(user *model.User, request *model.Request) error {
 		return nil
 	}
 	return common.ErrUnauthorized
+}
+
+// ensureNotRequestCreator blocks makers from validating/approving their own request (SoD).
+func ensureNotRequestCreator(authUserID primitive.ObjectID, request *model.Request) error {
+	if request == nil {
+		return common.ErrRequestNotFound
+	}
+	if !request.CreatedBy.IsZero() && request.CreatedBy == authUserID {
+		return common.ErrCannotActOnOwnRequest
+	}
+	return nil
+}
+
+// ensureSameOrg restricts actions to the request's branch or department.
+func ensureSameOrg(user *model.User, request *model.Request) error {
+	if user == nil || request == nil || user.Profile == nil {
+		return common.ErrUnauthorized
+	}
+	sameBranch := user.Profile.BranchID != nil &&
+		request.BranchID != nil &&
+		*user.Profile.BranchID == *request.BranchID
+	sameDepartment := user.Profile.DepartmentID != nil &&
+		request.DepartmentID != nil &&
+		*user.Profile.DepartmentID == *request.DepartmentID
+	if sameBranch || sameDepartment {
+		return nil
+	}
+	return common.ErrUnauthorized
+}
+
+// ensureCanProcessRequest allows the requesting org or a designated result-processor branch.
+func (ru *requestUsecase) ensureCanProcessRequest(ctx context.Context, user *model.User, request *model.Request) error {
+	if err := ensureSameOrg(user, request); err == nil {
+		return nil
+	}
+	if user == nil || user.Profile == nil || user.Profile.BranchID == nil || ru.branchRepository == nil {
+		return common.ErrUnauthorized
+	}
+	branch, err := ru.branchRepository.FindByID(ctx, *user.Profile.BranchID)
+	if err != nil || branch == nil || !branch.IsResultProcessor {
+		return common.ErrUnauthorized
+	}
+	return nil
 }
 
 func userProfileEmail(u *model.User) string {
@@ -421,6 +467,10 @@ func (ru *requestUsecase) UpdateRequest(ctx context.Context, authUserID primitiv
 	}
 
 	fromStatus := string(existingRequest.RequestStatus)
+	toStatus := forexRequest.RequestStatus
+	if toStatus == "" {
+		toStatus = fromStatus
+	}
 	if err := ru.requestRepository.UpdateIfStatus(ctx, requestID, expectedStatuses, &forexRequest); err != nil {
 		logrus.WithError(err).WithField("requestID", requestID).Error("Failed to update request")
 		return err
@@ -432,15 +482,38 @@ func (ru *requestUsecase) UpdateRequest(ctx context.Context, authUserID primitiv
 	}).Info("Request updated successfully")
 
 	entityID := requestID
+	updateMeta := map[string]any{}
+	if forexRequest.AssignedTo != nil && !forexRequest.AssignedTo.IsZero() {
+		updateMeta["assignee_id"] = forexRequest.AssignedTo.Hex()
+	}
+	desc := "Request updated"
+	if fromStatus == string(model.ReqStatusRejected) && toStatus == string(model.ReqStatusDrafted) {
+		desc = "Rejected request revised back to draft"
+	}
 	LogActivity(ru.activityLog, ctx, model.ActivityLogInput{
 		ActorID:     authUserID,
 		Action:      model.ActionRequestUpdate,
 		EntityType:  model.EntityRequest,
 		EntityID:    &entityID,
-		Description: "Request updated",
+		Description: desc,
 		FromState:   fromStatus,
-		ToState:     fromStatus,
+		ToState:     toStatus,
+		Metadata:    updateMeta,
 	})
+	if forexRequest.AssignedTo != nil && !forexRequest.AssignedTo.IsZero() {
+		LogActivity(ru.activityLog, ctx, model.ActivityLogInput{
+			ActorID:     authUserID,
+			Action:      model.ActionRequestAssign,
+			EntityType:  model.EntityRequest,
+			EntityID:    &entityID,
+			Description: "Request assigned",
+			FromState:   toStatus,
+			ToState:     toStatus,
+			Metadata: map[string]any{
+				"assignee_id": forexRequest.AssignedTo.Hex(),
+			},
+		})
+	}
 
 	return nil
 }
@@ -703,6 +776,10 @@ func (ru *requestUsecase) ValidateRequest(ctx context.Context, authUserID primit
 		return err
 	}
 
+	if err := ensureNotRequestCreator(authUserID, forexRequest); err != nil {
+		return err
+	}
+
 	if err := ensureAssignedTo(ru.activeAssignee(forexRequest), authUserID); err != nil {
 		return err
 	}
@@ -760,6 +837,10 @@ func (ru *requestUsecase) ApproveRequest(ctx context.Context, authUserID primiti
 
 	// Approve once: only from Validated (prevents rewriting approved amounts).
 	if err := ensureRequestStatus(existingRequest.RequestStatus, model.ReqStatusValidated); err != nil {
+		return err
+	}
+
+	if err := ensureNotRequestCreator(authUserID, existingRequest); err != nil {
 		return err
 	}
 
@@ -938,9 +1019,13 @@ func (ru *requestUsecase) DeclineOrgRequest(ctx context.Context, authUserID prim
 		return err
 	}
 
-	// Decline is a branch-level post-approval action (same tier as Accept) — not org-scoped.
-	if _, err := ru.userRepository.FindByID(ctx, authUserID); err != nil {
+	// Decline is post-approval processing — only the request's branch/department may act.
+	actor, err := ru.userRepository.FindByID(ctx, authUserID)
+	if err != nil || actor == nil {
 		return common.ErrUnauthorized
+	}
+	if err := ru.ensureCanProcessRequest(ctx, actor, existingRequest); err != nil {
+		return err
 	}
 
 	// Copy the data
@@ -1168,16 +1253,19 @@ func (ru *requestUsecase) AssignRequest(ctx context.Context, authUserID primitiv
 			}
 		}
 	case model.ReqStatusAuthorized:
+		// Validators only — branch makers must not claim forex validation work.
+		if !hasPermission(actorPerms, "request:validate") {
+			return nil, common.ErrUnauthorized
+		}
 		if targetID != authUserID {
 			return nil, common.ErrSelfAssignOnly
 		}
 	case model.ReqStatusValidated:
-		canAssignOthers := hasPermission(actorPerms, "request:approve")
-		if !canAssignOthers {
-			if targetID != authUserID {
-				return nil, common.ErrSelfAssignOnly
-			}
-		} else if targetID != authUserID {
+		// Approvers only — self-claim and assign-to-other both require approve.
+		if !hasPermission(actorPerms, "request:approve") {
+			return nil, common.ErrUnauthorized
+		}
+		if targetID != authUserID {
 			assigneeUser, err := ru.userRepository.FindByID(ctx, targetID)
 			if err != nil || assigneeUser == nil {
 				return nil, common.ErrAssigneeNotEligible
@@ -1216,6 +1304,10 @@ func (ru *requestUsecase) AssignRequest(ctx context.Context, authUserID primitiv
 		EntityType:  model.EntityRequest,
 		EntityID:    &entityID,
 		Description: "Request assigned",
+		FromState:   string(existingRequest.RequestStatus),
+		ToState:     string(existingRequest.RequestStatus),
+		// Include actor+assignee so repeated assigns are not collapsed by dedupe_key.
+		DedupeKey: fmt.Sprintf("%s:%s:%s:%s", model.ActionRequestAssign, requestID.Hex(), authUserID.Hex(), targetID.Hex()),
 		Metadata: map[string]any{
 			"assignee_id": targetID.Hex(),
 		},
@@ -1298,7 +1390,15 @@ func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitiv
 		return err
 	}
 
-	// Accept is branch-level post-approval — no validator/authorizer claim required.
+	// Accept is post-approval processing — only the request's branch/department may act.
+	accepter, err := ru.userRepository.FindByID(ctx, authUserID)
+	if err != nil || accepter == nil {
+		return common.ErrUnauthorized
+	}
+	if err := ru.ensureCanProcessRequest(ctx, accepter, existingRequest); err != nil {
+		return err
+	}
+
 	if err := ru.ensureForeignCurrencies(ctx, request.AcceptedCurrencyIDs); err != nil {
 		return err
 	}
@@ -1343,11 +1443,10 @@ func (ru *requestUsecase) AcceptRequest(ctx context.Context, authUserID primitiv
 	forexRequest.AcceptedAmountInCard = request.AcceptedAmountInCard
 	forexRequest.RequestStatus = string(model.ReqStatusAccepted)
 
-	// Processing branch is the accepter's branch (result-processor), independent of requesting branch.
+	// Record which branch performed processing (JWT branch, else accepter profile).
 	if !processingBranchID.IsZero() {
 		forexRequest.ProcessingBranchID = &processingBranchID
-	} else if accepter, err := ru.userRepository.FindByID(ctx, authUserID); err == nil &&
-		accepter != nil && accepter.Profile != nil && accepter.Profile.BranchID != nil {
+	} else if accepter.Profile != nil && accepter.Profile.BranchID != nil {
 		forexRequest.ProcessingBranchID = accepter.Profile.BranchID
 	}
 
